@@ -58,6 +58,90 @@ interface SyncState {
 // Store log messages for persistence
 let logMessages: string[] = [];
 
+// Daily scan memory - tracks scanned items, resets each day
+interface DailyScanMemory {
+  date: string; // YYYY-MM-DD
+  scannedListingIds: string[]; // Already processed listing IDs
+  lastCompletedPage: number; // Last fully completed page
+  totalScannedToday: number;
+  totalUpdatedToday: number;
+  totalOOSToday: number;
+}
+
+// Get today's date string
+function getTodayString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+// Load daily scan memory
+async function loadDailyScanMemory(): Promise<DailyScanMemory> {
+  const result = await chrome.storage.local.get('dailyScanMemory');
+  const memory = result.dailyScanMemory as DailyScanMemory | undefined;
+  
+  // Check if memory exists and is from today
+  if (memory && memory.date === getTodayString()) {
+    console.log('[Sync] Loaded daily memory:', memory.scannedListingIds.length, 'items scanned today');
+    return memory;
+  }
+  
+  // Create fresh memory for today
+  console.log('[Sync] Creating fresh daily memory');
+  return {
+    date: getTodayString(),
+    scannedListingIds: [],
+    lastCompletedPage: 0,
+    totalScannedToday: 0,
+    totalUpdatedToday: 0,
+    totalOOSToday: 0
+  };
+}
+
+// Save daily scan memory
+async function saveDailyScanMemory(memory: DailyScanMemory): Promise<void> {
+  await chrome.storage.local.set({ dailyScanMemory: memory });
+}
+
+// Mark items as scanned today
+async function markItemsScanned(listingIds: string[]): Promise<void> {
+  const memory = await loadDailyScanMemory();
+  memory.scannedListingIds = [...new Set([...memory.scannedListingIds, ...listingIds])];
+  memory.totalScannedToday = memory.scannedListingIds.length;
+  await saveDailyScanMemory(memory);
+}
+
+// Check if item was already scanned today
+async function wasScannedToday(listingId: string): Promise<boolean> {
+  const memory = await loadDailyScanMemory();
+  return memory.scannedListingIds.includes(listingId);
+}
+
+// Mark page as completed
+async function markPageCompleted(pageNum: number): Promise<void> {
+  const memory = await loadDailyScanMemory();
+  if (pageNum > memory.lastCompletedPage) {
+    memory.lastCompletedPage = pageNum;
+    await saveDailyScanMemory(memory);
+  }
+}
+
+// Get the starting page for resume
+async function getResumeStartPage(): Promise<number> {
+  const memory = await loadDailyScanMemory();
+  // Start from the page after the last completed one
+  return memory.lastCompletedPage + 1;
+}
+
+// Update daily totals
+async function updateDailyTotals(updated: number, oos: number): Promise<void> {
+  const memory = await loadDailyScanMemory();
+  memory.totalUpdatedToday += updated;
+  memory.totalOOSToday += oos;
+  await saveDailyScanMemory(memory);
+}
+
+// Global daily memory reference
+let dailyMemory: DailyScanMemory | null = null;
+
 async function saveSyncState() {
   // Collect log messages from the panel
   const logEl = document.getElementById('syndrax-log');
