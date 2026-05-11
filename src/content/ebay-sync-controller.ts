@@ -1392,10 +1392,88 @@ async function emergencyResume(savedState: SyncState) {
   }
 }
 
+// Block navigation to bad pages and redirect back
+function setupNavigationBlocker() {
+  // Block beforeunload if sync is running
+  window.addEventListener('beforeunload', (e) => {
+    if (isRunning) {
+      console.log('[Syndrax Sync] 🛑 Blocking navigation - sync in progress');
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+  });
+  
+  // Intercept all link clicks that might go to bad pages
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a') as HTMLAnchorElement;
+    
+    if (link && link.href) {
+      // Block navigation to the categories page
+      if (link.href.includes('/n/all-categories') || 
+          link.href.includes('_nkw=') ||
+          link.href.includes('/sch/') && !link.href.includes('/sh/')) {
+        console.log('[Syndrax Sync] 🛑 Blocked bad navigation:', link.href);
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }
+  }, true);
+  
+  // Also intercept form submissions
+  document.addEventListener('submit', (e) => {
+    const form = e.target as HTMLFormElement;
+    if (form.action && (form.action.includes('/n/all-categories') || 
+                        form.action.includes('_nkw=') ||
+                        form.action.includes('/sch/'))) {
+      console.log('[Syndrax Sync] 🛑 Blocked bad form submission:', form.action);
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+  
+  // Monitor for programmatic navigation
+  const originalAssign = window.location.assign;
+  window.location.assign = function(url: string) {
+    if (url.includes('/n/all-categories') || url.includes('_nkw=')) {
+      console.log('[Syndrax Sync] 🛑 Blocked location.assign:', url);
+      return;
+    }
+    return originalAssign.call(window.location, url);
+  };
+  
+  // Also override href setter (more aggressive)
+  const originalHref = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+  if (originalHref && originalHref.set) {
+    Object.defineProperty(window.location, 'href', {
+      set: function(url: string) {
+        if (url.includes('/n/all-categories') || (url.includes('_nkw=') && !url.includes('/sh/lst'))) {
+          console.log('[Syndrax Sync] 🛑 Blocked location.href:', url);
+          return;
+        }
+        return originalHref.set!.call(window.location, url);
+      },
+      get: function() {
+        return originalHref.get!.call(window.location);
+      }
+    });
+  }
+}
+
 // Initialize
 async function init() {
   const url = window.location.href;
   console.log('[Syndrax Sync] Checking URL:', url);
+  
+  // EMERGENCY: If we somehow landed on the bad page, redirect back immediately
+  if (url.includes('/n/all-categories') || (url.includes('_nkw=') && !url.includes('/sh/lst'))) {
+    console.log('[Syndrax Sync] 🚨 EMERGENCY: On bad page! Redirecting back to listings...');
+    window.location.href = 'https://www.ebay.com/sh/lst/active';
+    return;
+  }
   
   // Match any eBay listing page
   const isListingsPage = 
@@ -1411,6 +1489,10 @@ async function init() {
   }
   
   console.log('[Syndrax Sync] eBay Active Listings page detected!');
+  
+  // Setup navigation blocker to prevent bad redirects
+  setupNavigationBlocker();
+  
   createControlPanel();
   
   // Check for saved sync state and auto-resume

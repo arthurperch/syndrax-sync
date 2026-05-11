@@ -1,4 +1,4 @@
-import { storpaage, type InventoryItem } from './services/storage';
+import { storage, type InventoryItem } from './services/storage';
 import type { Message } from './services/messaging';
 
 interface AmazonCheckItem {
