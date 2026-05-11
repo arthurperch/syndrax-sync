@@ -346,24 +346,29 @@ async function updatePriceInline(row: Element, newPrice: number): Promise<boolea
   
   if (submitBtn) {
     console.log('[Sync Debug] Clicking price Submit button');
+    
+    // IMPORTANT: Prevent any form from submitting with page navigation
+    const parentForm = submitBtn.closest('form');
+    if (parentForm) {
+      parentForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+      }, { once: true });
+    }
+    
     submitBtn.focus();
     await sleep(100);
-    submitBtn.click();
+    
+    // Use dispatchEvent instead of click()
+    submitBtn.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }));
   } else {
     console.log('[Sync Debug] Price Submit button not found');
-    const form = document.querySelector('form.quick-edit-field') as HTMLFormElement;
-    if (form) {
-      const formSubmitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-      if (formSubmitBtn) {
-        formSubmitBtn.click();
-      } else {
-        form.submit();
-      }
-    } else {
-      logToPanel(`  ⚠️ Could not find Submit button for price`, 'warn');
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      return false;
-    }
+    logToPanel(`  ⚠️ Could not find Submit button for price`, 'warn');
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    return false;
   }
   
   await sleep(1500);
@@ -530,35 +535,31 @@ async function updateQuantityInline(row: Element, quantity: number): Promise<boo
   
   if (submitBtn) {
     console.log('[Sync Debug] Clicking Submit button:', submitBtn.outerHTML.substring(0, 100));
+    
+    // IMPORTANT: Prevent any form from submitting with page navigation
+    const parentForm = submitBtn.closest('form');
+    if (parentForm) {
+      parentForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+      }, { once: true });
+    }
+    
     submitBtn.focus();
     await sleep(100);
-    submitBtn.click();
+    
+    // Use dispatchEvent instead of click() to have more control
+    submitBtn.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window
+    }));
+    
     console.log('[Sync Debug] Clicked Submit button');
   } else {
-    console.log('[Sync Debug] Submit button not found, trying form submit');
-    // Log all buttons for debugging
-    const btns = document.querySelectorAll('.lightbox-dialog button, form button');
-    console.log('[Sync Debug] All dialog buttons:', Array.from(btns).map(b => ({
-      text: b.textContent?.trim().substring(0, 20),
-      class: b.className,
-      type: (b as HTMLButtonElement).type
-    })));
-    
-    // Try to find and submit the form directly
-    const form = document.querySelector('form.quick-edit-field') as HTMLFormElement;
-    if (form) {
-      const formSubmitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-      if (formSubmitBtn) {
-        console.log('[Sync Debug] Found form submit button');
-        formSubmitBtn.click();
-      } else {
-        form.submit();
-      }
-    } else {
-      logToPanel(`  ⚠️ Could not find Submit button`, 'warn');
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      return false;
-    }
+    console.log('[Sync Debug] Submit button not found');
+    logToPanel(`  ⚠️ Could not find Submit button`, 'warn');
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    return false;
   }
   
   await sleep(1500);
