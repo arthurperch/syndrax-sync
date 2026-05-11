@@ -75,7 +75,7 @@
     },
     {
       "js": [
-        "assets/ebay-sync-controller.ts-0a59935b.js"
+        "assets/ebay-sync-controller.ts-16ae6301.js"
       ],
       "matches": [
         "*://*.ebay.com/sh/lst/active*",
@@ -153,7 +153,7 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/ebay-sync-controller.ts-0a59935b.js"
+        "assets/ebay-sync-controller.ts-16ae6301.js"
       ],
       "use_dynamic_url": false
     },
