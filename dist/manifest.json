@@ -1,0 +1,170 @@
+{
+  "manifest_version": 3,
+  "name": "Syndrax Sync",
+  "version": "1.0.0",
+  "description": "Multi-channel eCommerce automation by Syndrax LLC",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "alarms"
+  ],
+  "host_permissions": [
+    "*://*.ebay.com/*",
+    "*://*.amazon.com/*",
+    "*://*.aliexpress.com/*",
+    "https://discord.com/*"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Syndrax Sync"
+  },
+  "background": {
+    "service_worker": "service-worker-loader.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "assets/ebay-order-extractor.ts-5b6dda91.js"
+      ],
+      "matches": [
+        "*://*.ebay.com/ord/*",
+        "*://*.ebay.com/sh/ord/*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/amazon-price-checker.ts-d12cf239.js",
+        "assets/amazon-scraper.ts-cb9e63c1.js"
+      ],
+      "matches": [
+        "*://*.amazon.com/dp/*",
+        "*://*.amazon.com/gp/product/*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/amazon-fulfillment.ts-9a99214c.js"
+      ],
+      "matches": [
+        "*://*.amazon.com/*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/aliexpress-price-checker.ts-dbf94a29.js"
+      ],
+      "matches": [
+        "*://*.aliexpress.com/item/*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/aliexpress-fulfillment.ts-e8af6fd4.js"
+      ],
+      "matches": [
+        "*://*.aliexpress.com/*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/ebay-sync-controller.ts-febc0c71.js"
+      ],
+      "matches": [
+        "*://*.ebay.com/sh/lst/active*",
+        "*://*.ebay.com/sh/lst?*",
+        "*://*.ebay.com/mys/active*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/ebay-listing-creator.ts-da16a0e4.js"
+      ],
+      "matches": [
+        "*://*.ebay.com/sl/sell*",
+        "*://*.ebay.com/sell/create*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/competitor-research.ts-31764ce4.js"
+      ],
+      "matches": [
+        "*://*.ebay.com/sch/*"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "*://*.ebay.com/*",
+        "*://*.ebay.com/*"
+      ],
+      "resources": [
+        "assets/ebay-order-extractor.ts-5b6dda91.js",
+        "assets/ebay-listing-creator.ts-da16a0e4.js"
+      ],
+      "use_dynamic_url": false
+    },
+    {
+      "matches": [
+        "*://*.amazon.com/*",
+        "*://*.amazon.com/*"
+      ],
+      "resources": [
+        "assets/amazon-price-checker.ts-d12cf239.js",
+        "assets/amazon-scraper.ts-cb9e63c1.js"
+      ],
+      "use_dynamic_url": false
+    },
+    {
+      "matches": [
+        "*://*.amazon.com/*"
+      ],
+      "resources": [
+        "assets/amazon-fulfillment.ts-9a99214c.js"
+      ],
+      "use_dynamic_url": false
+    },
+    {
+      "matches": [
+        "*://*.aliexpress.com/*"
+      ],
+      "resources": [
+        "assets/aliexpress-price-checker.ts-dbf94a29.js",
+        "assets/aliexpress-fulfillment.ts-e8af6fd4.js"
+      ],
+      "use_dynamic_url": false
+    },
+    {
+      "matches": [
+        "*://*.ebay.com/*",
+        "*://*.ebay.com/*",
+        "*://*.ebay.com/*"
+      ],
+      "resources": [
+        "assets/ebay-sync-controller.ts-febc0c71.js"
+      ],
+      "use_dynamic_url": false
+    },
+    {
+      "matches": [
+        "*://*.ebay.com/*"
+      ],
+      "resources": [
+        "assets/competitor-research.ts-31764ce4.js"
+      ],
+      "use_dynamic_url": false
+    }
+  ]
+}

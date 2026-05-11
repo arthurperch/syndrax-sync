@@ -1,0 +1,76 @@
+import { defineManifest } from '@crxjs/vite-plugin';
+
+export default defineManifest({
+  manifest_version: 3,
+  name: 'Syndrax Sync',
+  version: '1.0.0',
+  description: 'Multi-channel eCommerce automation by Syndrax LLC',
+  
+  permissions: [
+    'storage',
+    'tabs',
+    'activeTab',
+    'scripting',
+    'alarms'
+  ],
+  
+  host_permissions: [
+    '*://*.ebay.com/*',
+    '*://*.amazon.com/*',
+    '*://*.aliexpress.com/*',
+    'https://discord.com/*'
+  ],
+  
+  action: {
+    default_popup: 'index.html',
+    default_title: 'Syndrax Sync'
+  },
+  
+  background: {
+    service_worker: 'src/background-service.ts',
+    type: 'module'
+  },
+  
+  content_scripts: [
+    {
+      matches: ['*://*.ebay.com/ord/*', '*://*.ebay.com/sh/ord/*'],
+      js: ['src/content/ebay-order-extractor.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.amazon.com/dp/*', '*://*.amazon.com/gp/product/*'],
+      js: ['src/content/amazon-price-checker.ts', 'src/content/amazon-scraper.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.amazon.com/*'],
+      js: ['src/content/amazon-fulfillment.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.aliexpress.com/item/*'],
+      js: ['src/content/aliexpress-price-checker.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.aliexpress.com/*'],
+      js: ['src/content/aliexpress-fulfillment.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.ebay.com/sh/lst/active*', '*://*.ebay.com/sh/lst?*', '*://*.ebay.com/mys/active*'],
+      js: ['src/content/ebay-sync-controller.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.ebay.com/sl/sell*', '*://*.ebay.com/sell/create*'],
+      js: ['src/content/ebay-listing-creator.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: ['*://*.ebay.com/sch/*'],
+      js: ['src/content/competitor-research.ts'],
+      run_at: 'document_end'
+    }
+  ]
+});
