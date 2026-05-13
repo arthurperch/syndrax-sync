@@ -8,6 +8,18 @@ interface AmazonPriceData {
   inStock: boolean;
   stockLevel: 'in_stock' | 'low_stock' | 'out_of_stock';
   priceUpdatedAt: string;
+  // Fingerprint fields
+  title: string;
+  brand: string;
+  imageUrl: string;
+  imageCount: number;
+  category: string;
+  dimensions: string;
+  weight: string;
+  reviewCount: number;
+  starRating: number;
+  bullets: string[];
+  finalAsin: string;
 }
 
 // Selectors to try in order for price:
@@ -31,6 +43,81 @@ const STOCK_SELECTORS = [
   '#deliveryMessageMirId',
   '[data-csa-c-availability]'
 ];
+
+// Fingerprint scraping helpers
+const getTitle = (): string => {
+  const el = document.querySelector('#productTitle');
+  return el?.textContent?.trim() || '';
+};
+
+const getBrand = (): string => {
+  for (const sel of ['#bylineInfo', '#brand']) {
+    const el = document.querySelector(sel);
+    if (el?.textContent?.trim())
+      return el.textContent.trim()
+        .replace('Brand: ','').replace('Visit the ','').replace(' Store','');
+  }
+  return '';
+};
+
+const getBullets = (): string[] => {
+  const items = document.querySelectorAll('#feature-bullets li span.a-list-item');
+  return Array.from(items).map(el => el.textContent?.trim() || '').filter(Boolean);
+};
+
+const getCategory = (): string => {
+  const items = document.querySelectorAll('#wayfinding-breadcrumbs_feature_div a');
+  return Array.from(items).map(a => a.textContent?.trim()).filter(Boolean).join(' > ');
+};
+
+const getDimensions = (): string => {
+  const rows = document.querySelectorAll('#productDetails_techSpec_section_1 tr, #prodDetails tr');
+  for (const row of rows) {
+    const label = row.querySelector('th')?.textContent?.toLowerCase() || '';
+    if (label.includes('dimension') || label.includes('size')) {
+      return row.querySelector('td')?.textContent?.trim() || '';
+    }
+  }
+  return '';
+};
+
+const getWeight = (): string => {
+  const rows = document.querySelectorAll('#productDetails_techSpec_section_1 tr, #prodDetails tr');
+  for (const row of rows) {
+    const label = row.querySelector('th')?.textContent?.toLowerCase() || '';
+    if (label.includes('weight')) {
+      return row.querySelector('td')?.textContent?.trim() || '';
+    }
+  }
+  return '';
+};
+
+const getImageUrl = (): string => {
+  const img = document.querySelector('#landingImage') as HTMLImageElement;
+  return img?.src || '';
+};
+
+const getImageCount = (): number =>
+  document.querySelectorAll('#altImages img').length;
+
+const getFinalAsin = (): string => {
+  const m = window.location.pathname.match(/\/dp\/([A-Z0-9]{10})/i);
+  return m ? m[1].toUpperCase() : '';
+};
+
+const getReviewCount = (): number => {
+  const el = document.querySelector('#acrCustomerReviewText');
+  const text = el?.textContent || '';
+  const match = text.match(/[\d,]+/);
+  return match ? parseInt(match[0].replace(/,/g, '')) : 0;
+};
+
+const getStarRating = (): number => {
+  const el = document.querySelector('#acrPopover');
+  const title = el?.getAttribute('title') || '';
+  const match = title.match(/([\d.]+)/);
+  return match ? parseFloat(match[1]) : 0;
+};
 
 function scrapePriceData(): AmazonPriceData {
   let price = 0;
@@ -79,7 +166,19 @@ function scrapePriceData(): AmazonPriceData {
     currentPrice: price,
     inStock,
     stockLevel,
-    priceUpdatedAt: new Date().toISOString()
+    priceUpdatedAt: new Date().toISOString(),
+    // Fingerprint fields
+    title: getTitle(),
+    brand: getBrand(),
+    imageUrl: getImageUrl(),
+    imageCount: getImageCount(),
+    category: getCategory(),
+    dimensions: getDimensions(),
+    weight: getWeight(),
+    reviewCount: getReviewCount(),
+    starRating: getStarRating(),
+    bullets: getBullets(),
+    finalAsin: getFinalAsin()
   };
 }
 

@@ -37,7 +37,7 @@
     },
     {
       "js": [
-        "assets/amazon-price-checker.ts-d12cf239.js",
+        "assets/amazon-price-checker.ts-b7284c60.js",
         "assets/amazon-scraper.ts-cb9e63c1.js"
       ],
       "matches": [
@@ -75,7 +75,7 @@
     },
     {
       "js": [
-        "assets/ebay-sync-controller.ts-16ae6301.js"
+        "assets/ebay-sync-controller.ts-71c66e05.js"
       ],
       "matches": [
         "*://*.ebay.com/sh/lst/active*",
@@ -122,7 +122,7 @@
         "*://*.amazon.com/*"
       ],
       "resources": [
-        "assets/amazon-price-checker.ts-d12cf239.js",
+        "assets/amazon-price-checker.ts-b7284c60.js",
         "assets/amazon-scraper.ts-cb9e63c1.js"
       ],
       "use_dynamic_url": false
@@ -153,7 +153,7 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/ebay-sync-controller.ts-16ae6301.js"
+        "assets/ebay-sync-controller.ts-71c66e05.js"
       ],
       "use_dynamic_url": false
     },

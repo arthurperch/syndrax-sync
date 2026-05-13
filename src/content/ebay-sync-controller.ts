@@ -3,6 +3,7 @@
 // eBay page stays open as control hub, Amazon tabs open/close in background
 
 import { discord } from '../services/discord-logger';
+import { checkFingerprint, SCORES } from '../services/fingerprint';
 
 // Track start time for duration calculation
 let syncStartTime = 0;
@@ -693,6 +694,51 @@ function addRowBadge(row: Element, text: string, color: string) {
   rowEl.appendChild(badge);
 }
 
+// Helper to send Discord webhook for fingerprint alerts
+async function sendFingerprintWebhook(
+  fp: { action: string; score: number; signals: string[]; reasons: string[] },
+  item: { title: string; listingId: string; asin: string }
+) {
+  const WEBHOOK_ERRORS = 'https://discord.com/api/webhooks/1503288142210404355/X9iDEyw858yJpfrMvhY-8-onXKe_v4UXeEyFZIVfMJw3lBwAVyaM6iRoJzp3KzCW_vS-';
+  
+  const fields = [
+    ...fp.reasons.map((reason, i) => ({
+      name: `${fp.action === 'delist' ? '🔴' : '⚠️'} ${fp.signals[i]} (+${
+        (SCORES as Record<string, number>)[fp.signals[i]] || 0
+      } pts)`,
+      value: reason,
+      inline: false
+    })),
+    { name: '📊 Total Score', value: `${fp.score} pts`, inline: true },
+    { name: '🏪 eBay', value: `[View Listing](https://www.ebay.com/itm/${item.listingId})`, inline: true },
+    { name: '🛒 Amazon', value: `[View on Amazon](https://www.amazon.com/dp/${item.asin})`, inline: true },
+    { name: '⚡ Action Taken', value: 'eBay quantity set to 0. Listing stays active but cannot receive orders. Review and manually reinstate when confirmed safe.', inline: false }
+  ];
+
+  try {
+    await fetch(WEBHOOK_ERRORS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'Syndrax Sync',
+        avatar_url: 'https://syndrax.io/assets/images/logo.png',
+        embeds: [{
+          title: fp.action === 'delist'
+            ? '🚨 CRITICAL — Product Changed — Quantity Set to 0'
+            : '⚠️ WARNING — Suspicious Changes — Quantity Set to 0',
+          description: `**${item.title.substring(0, 80)}**\nASIN: \`${item.asin}\` | Listing: \`${item.listingId}\``,
+          color: fp.action === 'delist' ? 0xFF0000 : 0xFF8C00,
+          fields,
+          timestamp: new Date().toISOString(),
+          footer: { text: 'Syndrax Sync — Fingerprint Check' }
+        }]
+      })
+    });
+  } catch (err) {
+    console.error('Fingerprint webhook failed:', err);
+  }
+}
+
 // Process the result from Amazon check and update eBay
 async function processResult(item: ItemData, amazonData: {
   action: string;
@@ -701,10 +747,87 @@ async function processResult(item: ItemData, amazonData: {
   newEbayPrice?: number;
   priceWentUp?: boolean;
   similarity?: number;
+  // Fingerprint fields from Amazon scraper
+  title?: string;
+  brand?: string;
+  imageUrl?: string;
+  imageCount?: number;
+  category?: string;
+  dimensions?: string;
+  weight?: string;
+  reviewCount?: number;
+  starRating?: number;
+  bullets?: string[];
+  finalAsin?: string;
 }) {
   const rowEl = item.row as HTMLElement;
   const currentEbayQty = getEbayQuantity(item.row);
   const shortTitle = item.title.substring(0, 25);
+  
+  // ========== FINGERPRINT CHECK — runs before price/stock logic ==========
+  // Only run fingerprint check if we have the required Amazon data
+  if (amazonData.title && amazonData.brand !== undefined) {
+    const fp = await checkFingerprint(
+      { listingId: item.listingId, title: item.title, asin: item.asin },
+      {
+        title: amazonData.title || '',
+        price: amazonData.amazonPrice || 0,
+        brand: amazonData.brand || '',
+        imageUrl: amazonData.imageUrl || '',
+        imageCount: amazonData.imageCount || 0,
+        category: amazonData.category || '',
+        dimensions: amazonData.dimensions || '',
+        weight: amazonData.weight || '',
+        reviewCount: amazonData.reviewCount || 0,
+        starRating: amazonData.starRating || 0,
+        bullets: amazonData.bullets || [],
+        finalAsin: amazonData.finalAsin || item.asin
+      }
+    );
+
+    if (fp.action === 'delist' || fp.action === 'flag') {
+      logToPanel(`🔍 Fingerprint: ${fp.action.toUpperCase()} (${fp.score}pts)`, fp.action === 'delist' ? 'error' : 'warn');
+      
+      // Set eBay quantity to 0 to prevent orders
+      const qtyCell = rowEl.querySelector('.shui-dt-column__availableQuantity') as HTMLElement;
+      if (qtyCell) {
+        qtyCell.click();
+        await sleep(500);
+        const input = qtyCell.querySelector('input') as HTMLInputElement;
+        if (input) {
+          input.value = '0';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+          await sleep(500);
+        }
+      }
+
+      // Send Discord alert
+      await sendFingerprintWebhook(fp, item);
+
+      // Show badge on eBay row
+      rowEl.style.outline = `2px solid ${fp.action === 'delist' ? '#FF0000' : '#FF8C00'}`;
+      addRowBadge(
+        rowEl,
+        `${fp.action === 'delist' ? '🚨' : '⚠️'} ${fp.score}pts — Qty Set to 0`,
+        fp.action === 'delist' ? '#FF0000' : '#FF8C00'
+      );
+
+      stats.totalFlagged++;
+      stats.totalChecked++;
+      updatePanelStats();
+      
+      // Stop here — do not run price or stock update for this item
+      return;
+    }
+
+    // If baseline captured — show blue badge and continue normally
+    if (fp.action === 'baseline') {
+      addRowBadge(rowEl, '📸 Baseline Saved', '#00CFFF');
+      logToPanel(`📸 ${shortTitle}... → Baseline captured`, 'info');
+    }
+  }
+  // ========== END FINGERPRINT CHECK ==========
   
   // Highlight row being processed
   rowEl.style.outline = '2px solid #00CFFF';
