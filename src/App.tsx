@@ -6,6 +6,7 @@ import InventoryManager from './pages/InventoryManager';
 import SEOGenerator from './pages/SEOGenerator';
 import CompetitorResearch from './pages/CompetitorResearch';
 import Settings from './pages/Settings';
+import FinanceReconciliation from './pages/FinanceReconciliation';
 import Sidebar from './components/Sidebar';
 import DebugConsole from './components/DebugConsole';
 
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/inventory" element={<InventoryManager />} />
           <Route path="/seo" element={<SEOGenerator />} />
           <Route path="/competitors" element={<CompetitorResearch />} />
+          <Route path="/finance" element={<FinanceReconciliation />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>

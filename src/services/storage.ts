@@ -35,7 +35,7 @@ export interface InventoryItem {
   ebayPrice: number;
   quantity: number;
   customLabel: string;        // Raw base64 SKU from eBay
-  asin: string;               // Decoded ASIN
+  asin: string;               // Decoded ASIN (may be parent ASIN)
   sourceUrl: string;          // https://www.amazon.com/dp/{ASIN}
   sourcePlatform: 'amazon' | 'aliexpress' | 'unknown';
   imageUrl: string;
@@ -44,6 +44,11 @@ export interface InventoryItem {
   supplierPrice: number;      // From last price check — 0 if never checked
   inStock: boolean;           // From last price check — true by default
   stockLevel: 'in_stock' | 'low_stock' | 'out_of_stock';
+  // Variant fields — for products with size/color variants
+  childAsin?: string;         // Confirmed child ASIN for this specific variant
+  childUrl?: string;          // Full URL: amazon.com/dp/CHILDASIN?th=1&psc=1
+  variantLabel?: string;      // "48 x 72 - Woodgrain" — what variant we sell
+  variantConfirmed?: boolean; // True once we have confirmed the child ASIN
   // Legacy compatibility
   itemId?: string;
   lastChecked?: number;

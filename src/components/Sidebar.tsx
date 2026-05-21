@@ -6,6 +6,7 @@ const navItems = [
   { path: '/inventory', icon: '📊', label: 'Inventory' },
   { path: '/seo', icon: '✨', label: 'SEO AI' },
   { path: '/competitors', icon: '🔍', label: 'Research' },
+  { path: '/finance', icon: '💼', label: 'Finance' },
   { path: '/settings', icon: '⚙', label: 'Settings' },
 ];
 

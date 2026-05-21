@@ -2,8 +2,414 @@
 // This script controls the entire sync process from the eBay page
 // eBay page stays open as control hub, Amazon tabs open/close in background
 
-import { discord } from '../services/discord-logger';
 import { checkFingerprint, SCORES } from '../services/fingerprint';
+
+// Discord Webhook URLs - All 7 channels
+const WEBHOOKS = {
+  logs:           'https://discord.com/api/webhooks/1503287936739971184/qPvU1WhFw6MIGLQvCSB7uuVo-RfCGTyLEuIQ9KGzqSIx1u0tVu9SBHABAb3UO-XLLd0m',
+  errors:         'https://discord.com/api/webhooks/1503288142210404355/X9iDEyw858yJpfrMvhY-8-onXKe_v4UXeEyFZIVfMJw3lBwAVyaM6iRoJzp3KzCW_vS-',
+  priceUpdates:   'https://discord.com/api/webhooks/1503288293804998656/Q_JgPTP45rhzRcZ4K1l2PoD6zl1sglro2_wGyM7s-pLzPGdhmJOw719-pllOsjEEaSGY',
+  outOfStock:     'https://discord.com/api/webhooks/1503288443197980815/irYdU3Dw4FhQwtEZRvQ-SXroysuhWDFiQgzOT53bxuYz0zfgcGI5kBdZWu5vX3h0I5pS',
+  variantAlerts:  'https://discord.com/api/webhooks/1504718905489231972/fEr_SUxMKUON5IMhqW9LSAf8LlF0OkCxMbS5M168S0oPb5a8RIHQrJyOj6wdHaC0vrPI',
+  fingerprintLog: 'https://discord.com/api/webhooks/1504719051027386508/xH26ae_MBs7GyDVgQfWwaYzjIIJNKpvI032Wkq9yCbUq92kfwG8E69VG_nxNilMLJSyy',
+  dailySummary:   'https://discord.com/api/webhooks/1504719193684054180/I_BkYjc3oT--dSExLekK8HCUTE63GbASpzlbDCJ_NVgNCkOGZlttjEAgF3tIEKJAQeHb'
+};
+
+// Session tracking for detailed Discord reports
+interface SyncSession {
+  startedAt: string;
+  completedAt: string;
+  page: number;
+  totalChecked: number;
+  totalUpdated: number;
+  totalOutOfStock: number;
+  totalFlagged: number;
+  totalErrors: number;
+  totalNoAsin: number;
+  totalNoChange: number;
+  totalRestocked: number;
+  outOfStockItems: { title: string; listingId: string; asin: string; variantLabel?: string }[];
+  priceUpdatedItems: { title: string; listingId: string; oldPrice: number; newPrice: number; amazonPrice: number; direction: string }[];
+  flaggedItems: { title: string; listingId: string; asin: string; signals: string[] }[];
+  errorItems: { title: string; listingId: string; error: string }[];
+  noAsinItems: { title: string; listingId: string; rawSku: string }[];
+}
+
+// Global session for current sync run
+let currentSession: SyncSession = {
+  startedAt: '',
+  completedAt: '',
+  page: 1,
+  totalChecked: 0,
+  totalUpdated: 0,
+  totalOutOfStock: 0,
+  totalFlagged: 0,
+  totalErrors: 0,
+  totalNoAsin: 0,
+  totalNoChange: 0,
+  totalRestocked: 0,
+  outOfStockItems: [],
+  priceUpdatedItems: [],
+  flaggedItems: [],
+  errorItems: [],
+  noAsinItems: []
+};
+
+// Reset session for new sync run
+function resetSession() {
+  currentSession = {
+    startedAt: new Date().toISOString(),
+    completedAt: '',
+    page: 1,
+    totalChecked: 0,
+    totalUpdated: 0,
+    totalOutOfStock: 0,
+    totalFlagged: 0,
+    totalErrors: 0,
+    totalNoAsin: 0,
+    totalNoChange: 0,
+    totalRestocked: 0,
+    outOfStockItems: [],
+    priceUpdatedItems: [],
+    flaggedItems: [],
+    errorItems: [],
+    noAsinItems: []
+  };
+}
+
+// Ping test all webhooks on first sync of session
+let webhooksPinged = false;
+
+async function pingAllWebhooks(): Promise<void> {
+  if (webhooksPinged) return; // Only ping once per session
+  webhooksPinged = true;
+  
+  console.log('[Sync] 🔔 Testing all webhook connections...');
+  logToPanel('🔔 Testing Discord webhook connections...', 'info');
+  
+  const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const channels = Object.keys(WEBHOOKS) as (keyof typeof WEBHOOKS)[];
+  const results: { channel: string; success: boolean }[] = [];
+  
+  for (const channel of channels) {
+    try {
+      const response = await fetch(WEBHOOKS[channel], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: {
+            logs: 'Syndrax Sync',
+            errors: 'Syndrax Alert System',
+            priceUpdates: 'Syndrax PriceBot',
+            outOfStock: 'Syndrax StockBot',
+            variantAlerts: 'Syndrax VariantBot',
+            fingerprintLog: 'Syndrax Fingerprint',
+            dailySummary: 'Syndrax Daily Report'
+          }[channel] || 'Syndrax Sync',
+          avatar_url: 'https://syndrax.io/assets/images/logo.png',
+          embeds: [{
+            title: `✅ Webhook Connection Test — #${channel}`,
+            description: `This channel is connected and receiving messages from Syndrax Sync.`,
+            color: 0x00FF88,
+            fields: [
+              { name: '🕐 Time', value: timestamp, inline: true },
+              { name: '📡 Channel', value: `#${channel}`, inline: true },
+              { name: '🤖 Status', value: 'Connected ✅', inline: true }
+            ],
+            timestamp: new Date().toISOString(),
+            footer: { text: 'Syndrax Sync — Connection Test' }
+          }]
+        })
+      });
+      
+      if (response.ok) {
+        results.push({ channel, success: true });
+        console.log(`[Discord] ✅ Ping successful: #${channel}`);
+      } else {
+        results.push({ channel, success: false });
+        console.error(`[Discord] ❌ Ping failed: #${channel} — HTTP ${response.status}`);
+      }
+    } catch (err) {
+      results.push({ channel, success: false });
+      console.error(`[Discord] ❌ Ping failed: #${channel}:`, err);
+    }
+    
+    // Small delay between webhooks to avoid rate limits
+    await new Promise(r => setTimeout(r, 300));
+  }
+  
+  const successCount = results.filter(r => r.success).length;
+  logToPanel(`✅ Webhooks: ${successCount}/${channels.length} connected`, successCount === channels.length ? 'success' : 'warn');
+}
+
+// Send sync started webhook
+async function sendSyncStartedWebhook(totalItems: number) {
+  // First ping all webhooks to verify connections
+  await pingAllWebhooks();
+  
+  try {
+    await fetch(WEBHOOKS.logs, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'Syndrax Sync',
+        avatar_url: 'https://syndrax.io/assets/images/logo.png',
+        embeds: [{
+          title: '⚡ SYNC STARTED',
+          description: `Starting inventory sync at ${new Date().toLocaleTimeString()}`,
+          color: 0x00CFFF,
+          fields: [
+            { name: '📦 Listings Found', value: `${totalItems} items`, inline: true },
+            { name: '🕐 Time', value: new Date().toLocaleTimeString(), inline: true }
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: 'Syndrax Sync' }
+        }]
+      })
+    });
+  } catch (err) {
+    console.error('Sync started webhook failed:', err);
+  }
+}
+
+// Send comprehensive completion report to all webhooks
+async function sendSyncCompletionReport() {
+  const session = currentSession;
+  session.completedAt = new Date().toISOString();
+
+  const duration = Math.round(
+    (new Date(session.completedAt).getTime() - new Date(session.startedAt).getTime()) / 1000
+  );
+  const durationStr = duration > 60 
+    ? `${Math.floor(duration / 60)}m ${duration % 60}s` 
+    : `${duration}s`;
+
+  // ─── MAIN SYNC COMPLETION → sync-logs ───
+  try {
+    await fetch(WEBHOOKS.logs, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'Syndrax Sync',
+        avatar_url: 'https://syndrax.io/assets/images/logo.png',
+        embeds: [{
+          title: session.totalErrors > 0 || session.totalFlagged > 0
+            ? '⚠️ SYNC COMPLETE — Issues Found'
+            : '✅ SYNC COMPLETE — All Clear',
+          description: [
+            `**Pages scanned:** ${session.page}`,
+            `**Duration:** ${durationStr}`,
+            `**Started:** ${new Date(session.startedAt).toLocaleTimeString()}`,
+            `**Finished:** ${new Date(session.completedAt).toLocaleTimeString()}`
+          ].join('\n'),
+          color: session.totalErrors > 0 || session.totalOutOfStock > 0 ? 0xFF8C00 : 0x00FF88,
+          fields: [
+            {
+              name: '📊 Full Results',
+              value: [
+                `📦 **Total Checked:** ${session.totalChecked}`,
+                `💰 **Prices Updated:** ${session.totalUpdated}`,
+                `🚫 **Out of Stock:** ${session.totalOutOfStock}`,
+                `⚠️ **Flagged Items:** ${session.totalFlagged}`,
+                `❌ **Errors:** ${session.totalErrors}`,
+                `⚪ **No ASIN:** ${session.totalNoAsin}`
+              ].join('\n'),
+              inline: false
+            },
+            // Out of stock list
+            ...(session.outOfStockItems.length > 0 ? [{
+              name: `🚫 Out of Stock Items (${session.outOfStockItems.length})`,
+              value: session.outOfStockItems
+                .slice(0, 10)
+                .map(i => `• \`${i.asin}\` — ${i.title.substring(0, 35)}${i.variantLabel ? ` [${i.variantLabel}]` : ''}\n  [eBay](https://www.ebay.com/itm/${i.listingId}) | [Amazon](https://www.amazon.com/dp/${i.asin}?th=1&psc=1)`)
+                .join('\n') || 'None',
+              inline: false
+            }] : []),
+            // Price updates list
+            ...(session.priceUpdatedItems.length > 0 ? [{
+              name: `💰 Price Updates (${session.priceUpdatedItems.length})`,
+              value: session.priceUpdatedItems
+                .slice(0, 8)
+                .map(i => `• ${i.direction === 'up' ? '📈' : '📉'} ${i.title.substring(0, 35)}\n  Amazon: $${i.amazonPrice.toFixed(2)} | eBay: $${i.oldPrice.toFixed(2)} → $${i.newPrice.toFixed(2)}`)
+                .join('\n') || 'None',
+              inline: false
+            }] : []),
+            // Flagged items
+            ...(session.flaggedItems.length > 0 ? [{
+              name: `🚨 Flagged — Possible Product Changes (${session.flaggedItems.length})`,
+              value: session.flaggedItems
+                .slice(0, 5)
+                .map(i => `• \`${i.asin}\` — ${i.title.substring(0, 35)}\n  Signals: ${i.signals.join(', ')}`)
+                .join('\n') || 'None',
+              inline: false
+            }] : []),
+            // No ASIN items
+            ...(session.noAsinItems.length > 0 ? [{
+              name: `⚪ Items Without ASIN (${session.noAsinItems.length})`,
+              value: session.noAsinItems
+                .slice(0, 5)
+                .map(i => `• ${i.title.substring(0, 40)} | SKU: \`${i.rawSku || 'empty'}\`\n  [View eBay](https://www.ebay.com/itm/${i.listingId})`)
+                .join('\n') || 'None',
+              inline: false
+            }] : [])
+          ],
+          timestamp: new Date().toISOString(),
+          footer: { text: `Syndrax Sync | ${session.totalChecked} items processed` }
+        }]
+      })
+    });
+  } catch (err) {
+    console.error('Sync completion webhook failed:', err);
+  }
+
+  // ─── OUT OF STOCK REPORT → outOfStock webhook ───
+  if (session.outOfStockItems.length > 0) {
+    try {
+      await fetch(WEBHOOKS.outOfStock, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Syndrax StockBot',
+          avatar_url: 'https://syndrax.io/assets/images/logo.png',
+          embeds: [{
+            title: `🚫 ${session.outOfStockItems.length} Item${session.outOfStockItems.length > 1 ? 's' : ''} Out of Stock — eBay Quantities Set to 0`,
+            description: `Sync run at ${new Date(session.completedAt).toLocaleTimeString()} detected these items unavailable on Amazon. eBay quantities have been automatically set to 0 to prevent orders.`,
+            color: 0xFF3D3D,
+            fields: session.outOfStockItems.slice(0, 5).map(item => ({
+              name: `❌ ${item.title.substring(0, 50)}`,
+              value: [
+                `**ASIN:** \`${item.asin}\``,
+                `**Variant:** ${item.variantLabel || 'Single variant'}`,
+                `**eBay:** [View Listing](https://www.ebay.com/itm/${item.listingId})`,
+                `**Amazon:** [View Source](https://www.amazon.com/dp/${item.asin}?th=1&psc=1)`,
+                `**Action:** Qty set to 0 — relist when back in stock`
+              ].join('\n'),
+              inline: false
+            })),
+            timestamp: new Date().toISOString(),
+            footer: { text: 'Syndrax StockBot — Auto Stock Monitor' }
+          }]
+        })
+      });
+    } catch (err) {
+      console.error('Out of stock webhook failed:', err);
+    }
+  }
+
+  // ─── PRICE UPDATES REPORT → priceUpdates webhook ───
+  if (session.priceUpdatedItems.length > 0) {
+    try {
+      await fetch(WEBHOOKS.priceUpdates, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Syndrax PriceBot',
+          avatar_url: 'https://syndrax.io/assets/images/logo.png',
+          embeds: [{
+            title: `💰 ${session.priceUpdatedItems.length} Price Update${session.priceUpdatedItems.length > 1 ? 's' : ''} Applied`,
+            description: `Automatic price updates from sync run at ${new Date(session.completedAt).toLocaleTimeString()}. All prices recalculated at 100% markup over Amazon cost.`,
+            color: 0x00CFFF,
+            fields: [
+              {
+                name: '📊 Price Change Summary',
+                value: [
+                  `📈 **Increased:** ${session.priceUpdatedItems.filter(i => i.direction === 'up').length} items`,
+                  `📉 **Decreased:** ${session.priceUpdatedItems.filter(i => i.direction === 'down').length} items`,
+                  `💵 **Total Revenue Impact:** ${
+                    session.priceUpdatedItems.reduce((sum, i) => sum + (i.newPrice - i.oldPrice), 0) > 0 ? '+' : ''
+                  }$${session.priceUpdatedItems.reduce((sum, i) => sum + (i.newPrice - i.oldPrice), 0).toFixed(2)}`
+                ].join('\n'),
+                inline: false
+              },
+              ...session.priceUpdatedItems.slice(0, 10).map(item => ({
+                name: `${item.direction === 'up' ? '📈' : '📉'} ${item.title.substring(0, 45)}`,
+                value: [
+                  `**Amazon:** $${item.amazonPrice.toFixed(2)} (source)`,
+                  `**eBay was:** $${item.oldPrice.toFixed(2)}`,
+                  `**eBay now:** $${item.newPrice.toFixed(2)} (100% markup)`,
+                  `**Change:** ${item.direction === 'up' ? '+' : ''}$${(item.newPrice - item.oldPrice).toFixed(2)}`,
+                  `[View eBay Listing](https://www.ebay.com/itm/${item.listingId})`
+                ].join('\n'),
+                inline: true
+              }))
+            ],
+            timestamp: new Date().toISOString(),
+            footer: { text: 'Syndrax PriceBot — Auto Price Sync' }
+          }]
+        })
+      });
+    } catch (err) {
+      console.error('Price updates webhook failed:', err);
+    }
+  }
+
+  // ─── ERRORS REPORT → errors webhook ───
+  if (session.flaggedItems.length > 0 || session.errorItems.length > 0 || session.noAsinItems.length > 0) {
+    try {
+      await fetch(WEBHOOKS.errors, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'Syndrax Alert System',
+          avatar_url: 'https://syndrax.io/assets/images/logo.png',
+          embeds: [{
+            title: `🚨 Sync Alert Report — ${session.flaggedItems.length + session.errorItems.length + session.noAsinItems.length} Issues Found`,
+            description: `Issues detected during sync run at ${new Date(session.completedAt).toLocaleTimeString()}. Manual review required for flagged items.`,
+            color: 0xFF0000,
+            fields: [
+              {
+                name: '⚡ Issue Summary',
+                value: [
+                  `🚨 **Product Changed (Fingerprint):** ${session.flaggedItems.length}`,
+                  `❌ **Scrape Errors:** ${session.errorItems.length}`,
+                  `⚪ **No ASIN Found:** ${session.noAsinItems.length}`
+                ].join('\n'),
+                inline: false
+              },
+              // Fingerprint flagged items
+              ...session.flaggedItems.slice(0, 5).map(item => ({
+                name: `🚨 FLAGGED — ${item.title.substring(0, 45)}`,
+                value: [
+                  `**ASIN:** \`${item.asin}\``,
+                  `**Why flagged:** ${item.signals.join(', ')}`,
+                  `**eBay qty set to 0** — verify product before relisting`,
+                  `[eBay](https://www.ebay.com/itm/${item.listingId}) | [Amazon](https://www.amazon.com/dp/${item.asin}?th=1&psc=1)`
+                ].join('\n'),
+                inline: false
+              })),
+              // No ASIN items
+              ...session.noAsinItems.slice(0, 5).map(item => ({
+                name: `⚪ NO ASIN — ${item.title.substring(0, 45)}`,
+                value: [
+                  `**Listing ID:** ${item.listingId}`,
+                  `**Raw SKU:** \`${item.rawSku || 'empty'}\``,
+                  `**Fix:** Add Amazon ASIN to eBay custom label field`,
+                  `[View eBay Listing](https://www.ebay.com/itm/${item.listingId})`
+                ].join('\n'),
+                inline: false
+              })),
+              // Errors
+              ...session.errorItems.slice(0, 5).map(item => ({
+                name: `❌ ERROR — ${item.title.substring(0, 45)}`,
+                value: [
+                  `**Listing ID:** ${item.listingId}`,
+                  `**Error:** ${item.error.substring(0, 150)}`
+                ].join('\n'),
+                inline: false
+              }))
+            ],
+            timestamp: new Date().toISOString(),
+            footer: { text: 'Syndrax Alert System — Manual review required' }
+          }]
+        })
+      });
+    } catch (err) {
+      console.error('Errors webhook failed:', err);
+    }
+  }
+
+  console.log('[Sync] All Discord webhooks sent');
+}
 
 // Track start time for duration calculation
 let syncStartTime = 0;
@@ -857,13 +1263,40 @@ async function processResult(item: ItemData, amazonData: {
         if (updated) {
           stats.totalUpdated++;
           logToPanel(`✓ Quantity updated to 0`, 'success');
-          // Discord: Out of stock
-          await discord.outOfStock({
+    // Track for session report AND send immediate webhook
+          currentSession.totalOutOfStock++;
+          currentSession.outOfStockItems.push({
             title: item.title,
             listingId: item.listingId,
-            amazonUrl: `https://www.amazon.com/dp/${item.asin}`,
-            amazonPrice: amazonData.amazonPrice || 0
+            asin: item.asin,
+            variantLabel: undefined
           });
+          
+          // REAL-TIME WEBHOOK: Out of Stock
+          try {
+            await fetch(WEBHOOKS.outOfStock, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: 'Syndrax StockBot',
+                avatar_url: 'https://syndrax.io/assets/images/logo.png',
+                embeds: [{
+                  title: '🚫 OUT OF STOCK — eBay Set to 0',
+                  description: `**${item.title.substring(0, 60)}**`,
+                  color: 0xFF3D3D,
+                  fields: [
+                    { name: 'ASIN', value: `\`${item.asin}\``, inline: true },
+                    { name: 'eBay Price', value: `$${item.price.toFixed(2)}`, inline: true },
+                    { name: 'eBay', value: `[View](https://www.ebay.com/itm/${item.listingId})`, inline: true },
+                    { name: 'Amazon', value: `[View](https://www.amazon.com/dp/${item.asin}?th=1&psc=1)`, inline: true },
+                    { name: 'Action', value: '✅ Quantity set to 0', inline: false }
+                  ],
+                  timestamp: new Date().toISOString(),
+                  footer: { text: 'Syndrax StockBot — Real-time Alert' }
+                }]
+              })
+            });
+          } catch (e) { console.error('OOS webhook failed:', e); }
         } else {
           logToPanel(`⚠ Manual update needed`, 'warn');
         }
@@ -908,8 +1341,9 @@ async function processResult(item: ItemData, amazonData: {
             stats.totalUpdated++;
             addRowBadge(rowEl, `${amazonData.priceWentUp ? '↑' : '↓'} $${amazonData.newEbayPrice?.toFixed(2)} ✓`, priceColor);
             logToPanel(`✓ Price updated to $${amazonData.newEbayPrice.toFixed(2)}`, 'success');
-            // Discord: Price updated
-            await discord.priceUpdated({
+            // Track for session report AND send immediate webhook
+            currentSession.totalUpdated++;
+            currentSession.priceUpdatedItems.push({
               title: item.title,
               listingId: item.listingId,
               oldPrice: item.price,
@@ -917,6 +1351,33 @@ async function processResult(item: ItemData, amazonData: {
               amazonPrice: amazonData.amazonPrice || 0,
               direction: amazonData.priceWentUp ? 'up' : 'down'
             });
+            
+            // REAL-TIME WEBHOOK: Price Update
+            try {
+              await fetch(WEBHOOKS.priceUpdates, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: 'Syndrax PriceBot',
+                  avatar_url: 'https://syndrax.io/assets/images/logo.png',
+                  embeds: [{
+                    title: amazonData.priceWentUp ? '📈 PRICE INCREASED' : '📉 PRICE DECREASED',
+                    description: `**${item.title.substring(0, 60)}**`,
+                    color: amazonData.priceWentUp ? 0xFFD700 : 0x00FF88,
+                    fields: [
+                      { name: 'ASIN', value: `\`${item.asin}\``, inline: true },
+                      { name: 'Amazon Price', value: `$${amazonData.amazonPrice?.toFixed(2)}`, inline: true },
+                      { name: 'Old eBay Price', value: `$${item.price.toFixed(2)}`, inline: true },
+                      { name: 'New eBay Price', value: `**$${amazonData.newEbayPrice.toFixed(2)}**`, inline: true },
+                      { name: 'Change', value: `${amazonData.priceWentUp ? '+' : ''}$${(amazonData.newEbayPrice - item.price).toFixed(2)}`, inline: true },
+                      { name: 'eBay', value: `[View](https://www.ebay.com/itm/${item.listingId})`, inline: true }
+                    ],
+                    timestamp: new Date().toISOString(),
+                    footer: { text: 'Syndrax PriceBot — Real-time Alert' }
+                  }]
+                })
+              });
+            } catch (e) { console.error('Price webhook failed:', e); }
           } else {
             addRowBadge(rowEl, `${amazonData.priceWentUp ? '↑' : '↓'} $${amazonData.newEbayPrice?.toFixed(2)} ⚠`, priceColor);
             logToPanel(`⚠ Manual price update needed`, 'warn');
@@ -981,8 +1442,9 @@ async function runSync() {
     const rows = document.querySelectorAll('tr.grid-row[data-id]');
     totalItemsOnPage = rows.length;
     
-    // Discord: Sync started
-    await discord.syncStarted(totalItemsOnPage);
+    // Reset session and send sync started webhook
+    resetSession();
+    await sendSyncStartedWebhook(totalItemsOnPage);
   } else {
     logToPanel(`🚀 Continuing sync on page ${stats.pageNum}...`, 'success');
   }
@@ -1147,6 +1609,9 @@ async function runSync() {
     stats.pageNum++;
     await saveSyncState();
     
+    // Allow navigation to next page (don't trigger beforeunload warning)
+    allowNavigation = true;
+    
     currentUrl.searchParams.set('offset', newOffset.toString());
     window.location.href = currentUrl.toString();
     
@@ -1160,16 +1625,14 @@ async function runSync() {
   logToPanel(`✅ COMPLETE! Checked: ${stats.totalChecked}, OOS: ${stats.totalOutOfStock}`, 'success');
   console.log('[Sync] Complete!', stats);
   
-  // Discord: Sync complete
-  const duration = `${Math.round((Date.now() - syncStartTime) / 1000)}s`;
-  await discord.syncComplete({
-    checked: stats.totalChecked,
-    updated: stats.totalUpdated,
-    outOfStock: stats.totalOutOfStock,
-    flagged: stats.totalFlagged,
-    errors: totalErrors,
-    duration: duration
-  });
+  // Update session tracking with final stats
+  currentSession.totalChecked = stats.totalChecked;
+  currentSession.totalNoChange = stats.totalNoChange;
+  currentSession.totalFlagged = stats.totalFlagged;
+  currentSession.page = stats.pageNum;
+  
+  // Send comprehensive Discord completion report to all webhooks
+  await sendSyncCompletionReport();
   
   chrome.runtime.sendMessage({
     type: 'SYNC_COMPLETE',
@@ -1599,15 +2062,27 @@ async function emergencyResume(savedState: SyncState) {
   }
 }
 
+// Flag to allow intentional page navigation
+let allowNavigation = false;
+
 // Block navigation to bad pages and redirect back
 function setupNavigationBlocker() {
-  // Block beforeunload if sync is running
+  // Block beforeunload ONLY if user is trying to close/leave unexpectedly
+  // Do NOT block during intentional page navigation (going to page 2, etc)
   window.addEventListener('beforeunload', (e) => {
-    if (isRunning) {
-      console.log('[Syndrax Sync] 🛑 Blocking navigation - sync in progress');
-      e.preventDefault();
-      e.returnValue = '';
-      return '';
+    // If we're intentionally navigating (to next page), allow it
+    if (allowNavigation) {
+      console.log('[Syndrax Sync] ✅ Allowing intentional navigation');
+      return;
+    }
+    
+    // Only warn if sync is running AND user is trying to close/leave
+    if (isRunning && !allowNavigation) {
+      console.log('[Syndrax Sync] 🛑 Warning user - sync in progress');
+      // NOTE: Don't actually prevent navigation - just warn
+      // Modern browsers ignore returnValue anyway for security
+      // e.preventDefault();
+      // e.returnValue = '';
     }
   });
   
@@ -1642,32 +2117,9 @@ function setupNavigationBlocker() {
     }
   }, true);
   
-  // Monitor for programmatic navigation
-  const originalAssign = window.location.assign;
-  window.location.assign = function(url: string) {
-    if (url.includes('/n/all-categories') || url.includes('_nkw=')) {
-      console.log('[Syndrax Sync] 🛑 Blocked location.assign:', url);
-      return;
-    }
-    return originalAssign.call(window.location, url);
-  };
-  
-  // Also override href setter (more aggressive)
-  const originalHref = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
-  if (originalHref && originalHref.set) {
-    Object.defineProperty(window.location, 'href', {
-      set: function(url: string) {
-        if (url.includes('/n/all-categories') || (url.includes('_nkw=') && !url.includes('/sh/lst'))) {
-          console.log('[Syndrax Sync] 🛑 Blocked location.href:', url);
-          return;
-        }
-        return originalHref.set!.call(window.location, url);
-      },
-      get: function() {
-        return originalHref.get!.call(window.location);
-      }
-    });
-  }
+  // NOTE: Cannot override window.location.assign or window.location.href
+  // in modern Chrome - they are read-only. The click/submit handlers above
+  // are sufficient for blocking bad navigation from eBay's UI.
 }
 
 // Initialize

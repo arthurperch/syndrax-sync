@@ -32,6 +32,12 @@ export default defineManifest({
   },
   
   content_scripts: [
+    // eBay Mesh Order Details - Auto Order overlay
+    {
+      matches: ['*://*.ebay.com/mesh/ord/details*'],
+      js: ['src/content/ebay-mesh-order-overlay.ts'],
+      run_at: 'document_end'
+    },
     {
       matches: ['*://*.ebay.com/ord/*', '*://*.ebay.com/sh/ord/*'],
       js: ['src/content/ebay-order-extractor.ts'],
@@ -58,7 +64,7 @@ export default defineManifest({
       run_at: 'document_end'
     },
     {
-      matches: ['*://*.ebay.com/sh/lst/active*', '*://*.ebay.com/sh/lst?*', '*://*.ebay.com/mys/active*'],
+      matches: ['*://*.ebay.com/sh/lst/*', '*://*.ebay.com/sh/lst*', '*://*.ebay.com/mys/active*'],
       js: ['src/content/ebay-sync-controller.ts'],
       run_at: 'document_end'
     },
@@ -71,6 +77,36 @@ export default defineManifest({
       matches: ['*://*.ebay.com/sch/*'],
       js: ['src/content/competitor-research.ts'],
       run_at: 'document_end'
+    },
+    // Finance Reconciliation - eBay Sold Pages
+    {
+      matches: ['*://*.ebay.com/mys/sold*', '*://*.ebay.com/sh/ord/*sold*'],
+      js: ['src/content/finance-ebay-scanner.ts'],
+      run_at: 'document_end'
+    },
+    // Finance Reconciliation - eBay Payment Details Pages
+    {
+      matches: [
+        '*://*.ebay.com/mes/transactiondetails*',
+        '*://*.ebay.com/mesh/pmt/details*',
+        '*://*.ebay.com/mesh/ord/details*',
+        '*://*.ebay.com/payments/paymentSummary*'
+      ],
+      js: ['src/content/finance-ebay-payment.ts'],
+      run_at: 'document_end'
+    },
+    // Finance Reconciliation - Amazon Order History
+    {
+      matches: ['*://*.amazon.com/gp/your-account/order-history*', '*://*.amazon.com/your-orders*', '*://*.amazon.com/gp/css/order-history*'],
+      js: ['src/content/finance-amazon-orders.ts'],
+      run_at: 'document_end'
+    }
+  ],
+  
+  web_accessible_resources: [
+    {
+      resources: ['button1.mp3'],
+      matches: ['*://*.amazon.com/*', '*://*.ebay.com/*']
     }
   ]
 });

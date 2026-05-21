@@ -10,6 +10,7 @@ const SCORES = {
   IMAGE_URL_CHANGED:       65,
   CATEGORY_CHANGED:        60,
   REVIEWS_DROPPED_80PCT:   50,
+  VARIANT_CHANGED:         45,  // NEW: variant label changed
   RATING_DROPPED_2PT:      30,
   KEYWORD_SIMILARITY_LOW:  30,
   IMAGE_COUNT_CHANGED:     25,
@@ -65,7 +66,7 @@ async function saveFingerprints(data: Record<string, any>): Promise<void> {
 }
 
 export async function checkFingerprint(
-  item: { listingId: string; title: string; asin: string },
+  item: { listingId: string; title: string; asin: string; variantLabel?: string },
   amazon: {
     title: string;
     price: number;
@@ -79,6 +80,7 @@ export async function checkFingerprint(
     starRating: number;
     bullets: string[];
     finalAsin: string;
+    selectedVariantLabel?: string; // NEW: current variant label from Amazon
   }
 ): Promise<{ action: 'clean'|'log'|'flag'|'delist'|'baseline'; score: number; signals: string[]; reasons: string[] }> {
 
@@ -99,7 +101,8 @@ export async function checkFingerprint(
         weight: amazon.weight,
         reviewCount: amazon.reviewCount,
         starRating: amazon.starRating,
-        keywords: extractKeywords(amazon.bullets)
+        keywords: extractKeywords(amazon.bullets),
+        variantLabel: amazon.selectedVariantLabel || '' // NEW: store variant label
       }
     };
     await saveFingerprints(prints);
@@ -198,6 +201,18 @@ export async function checkFingerprint(
   if (baseline.imageCount > 0 && Math.abs(amazon.imageCount - baseline.imageCount) >= 3) {
     add('IMAGE_COUNT_CHANGED', SCORES.IMAGE_COUNT_CHANGED,
       `Image count changed: ${baseline.imageCount} → ${amazon.imageCount} photos. Photo gallery significantly changed.`);
+  }
+
+  // ─────────────────────────────────────────────────────
+  // VARIANT CHANGED — size or color we sell may have changed
+  // ─────────────────────────────────────────────────────
+  const baselineVariant = baseline.variantLabel || '';
+  const currentVariant = amazon.selectedVariantLabel || '';
+
+  if (baselineVariant && currentVariant && baselineVariant !== currentVariant) {
+    add('VARIANT_CHANGED', SCORES.VARIANT_CHANGED,
+      `Variant changed from "${baselineVariant}" to "${currentVariant}". ` +
+      `The specific size/color your eBay listing shows may now be different from what Amazon ships.`);
   }
 
   // Determine action
