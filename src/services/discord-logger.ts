@@ -1,16 +1,4 @@
-const WEBHOOKS = {
-  // Existing channels
-  logs:           'https://discord.com/api/webhooks/1503287936739971184/qPvU1WhFw6MIGLQvCSB7uuVo-RfCGTyLEuIQ9KGzqSIx1u0tVu9SBHABAb3UO-XLLd0m',
-  errors:         'https://discord.com/api/webhooks/1503288142210404355/X9iDEyw858yJpfrMvhY-8-onXKe_v4UXeEyFZIVfMJw3lBwAVyaM6iRoJzp3KzCW_vS-',
-  priceUpdates:   'https://discord.com/api/webhooks/1503288293804998656/Q_JgPTP45rhzRcZ4K1l2PoD6zl1sglro2_wGyM7s-pLzPGdhmJOw719-pllOsjEEaSGY',
-  outOfStock:     'https://discord.com/api/webhooks/1503288443197980815/irYdU3Dw4FhQwtEZRvQ-SXroysuhWDFiQgzOT53bxuYz0zfgcGI5kBdZWu5vX3h0I5pS',
-  // New channels
-  variantAlerts:  'https://discord.com/api/webhooks/1504718905489231972/fEr_SUxMKUON5IMhqW9LSAf8LlF0OkCxMbS5M168S0oPb5a8RIHQrJyOj6wdHaC0vrPI',
-  fingerprintLog: 'https://discord.com/api/webhooks/1504719051027386508/xH26ae_MBs7GyDVgQfWwaYzjIIJNKpvI032Wkq9yCbUq92kfwG8E69VG_nxNilMLJSyy',
-  dailySummary:   'https://discord.com/api/webhooks/1504719193684054180/I_BkYjc3oT--dSExLekK8HCUTE63GbASpzlbDCJ_NVgNCkOGZlttjEAgF3tIEKJAQeHb'
-};
-
-type WebhookChannel = keyof typeof WEBHOOKS;
+import { WEBHOOKS, type WebhookChannel } from '../config/webhooks.config';
 
 const webhookNames: Record<WebhookChannel, string> = {
   logs:           'Syndrax Sync',

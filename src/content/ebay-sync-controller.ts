@@ -3,17 +3,7 @@
 // eBay page stays open as control hub, Amazon tabs open/close in background
 
 import { checkFingerprint, SCORES } from '../services/fingerprint';
-
-// Discord Webhook URLs - All 7 channels
-const WEBHOOKS = {
-  logs:           'https://discord.com/api/webhooks/1503287936739971184/qPvU1WhFw6MIGLQvCSB7uuVo-RfCGTyLEuIQ9KGzqSIx1u0tVu9SBHABAb3UO-XLLd0m',
-  errors:         'https://discord.com/api/webhooks/1503288142210404355/X9iDEyw858yJpfrMvhY-8-onXKe_v4UXeEyFZIVfMJw3lBwAVyaM6iRoJzp3KzCW_vS-',
-  priceUpdates:   'https://discord.com/api/webhooks/1503288293804998656/Q_JgPTP45rhzRcZ4K1l2PoD6zl1sglro2_wGyM7s-pLzPGdhmJOw719-pllOsjEEaSGY',
-  outOfStock:     'https://discord.com/api/webhooks/1503288443197980815/irYdU3Dw4FhQwtEZRvQ-SXroysuhWDFiQgzOT53bxuYz0zfgcGI5kBdZWu5vX3h0I5pS',
-  variantAlerts:  'https://discord.com/api/webhooks/1504718905489231972/fEr_SUxMKUON5IMhqW9LSAf8LlF0OkCxMbS5M168S0oPb5a8RIHQrJyOj6wdHaC0vrPI',
-  fingerprintLog: 'https://discord.com/api/webhooks/1504719051027386508/xH26ae_MBs7GyDVgQfWwaYzjIIJNKpvI032Wkq9yCbUq92kfwG8E69VG_nxNilMLJSyy',
-  dailySummary:   'https://discord.com/api/webhooks/1504719193684054180/I_BkYjc3oT--dSExLekK8HCUTE63GbASpzlbDCJ_NVgNCkOGZlttjEAgF3tIEKJAQeHb'
-};
+import { WEBHOOKS } from '../config/webhooks.config';
 
 // Session tracking for detailed Discord reports
 interface SyncSession {
@@ -1105,7 +1095,6 @@ async function sendFingerprintWebhook(
   fp: { action: string; score: number; signals: string[]; reasons: string[] },
   item: { title: string; listingId: string; asin: string }
 ) {
-  const WEBHOOK_ERRORS = 'https://discord.com/api/webhooks/1503288142210404355/X9iDEyw858yJpfrMvhY-8-onXKe_v4UXeEyFZIVfMJw3lBwAVyaM6iRoJzp3KzCW_vS-';
   
   const fields = [
     ...fp.reasons.map((reason, i) => ({
@@ -1122,7 +1111,7 @@ async function sendFingerprintWebhook(
   ];
 
   try {
-    await fetch(WEBHOOK_ERRORS, {
+    await fetch(WEBHOOKS.errors, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
