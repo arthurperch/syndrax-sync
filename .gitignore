@@ -15,6 +15,13 @@ config.local.ts
 src/config/webhooks.config.ts
 !src/config/webhooks.config.example.ts
 
+# Secrets config (contains API keys)
+src/config/secrets.config.ts
+!src/config/secrets.config.example.ts
+
+# Any other config files with secrets
+src/config/*.local.ts
+
 # IDE
 .vscode/
 .idea/
