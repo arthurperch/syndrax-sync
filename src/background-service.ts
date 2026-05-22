@@ -353,6 +353,29 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         return { success: true };
       }
       
+      // ===== FINANCE RECONCILIATION SCAN =====
+      if (msgType === 'START_FINANCE_SCAN') {
+        const { runId, startUrl } = message.payload as { runId: string; startUrl: string };
+        console.log(`💰 Starting Finance Scan: ${runId}`);
+        startFinanceScan(runId, startUrl);
+        return { success: true };
+      }
+      
+      if (msgType === 'PAUSE_FINANCE_SCAN') {
+        pauseFinanceScan();
+        return { success: true };
+      }
+      
+      if (msgType === 'RESUME_FINANCE_SCAN') {
+        resumeFinanceScan();
+        return { success: true };
+      }
+      
+      if (msgType === 'STOP_FINANCE_SCAN') {
+        stopFinanceScan();
+        return { success: true };
+      }
+      
       // ===== FINANCE EARNINGS BATCH SCAN =====
       if (msgType === 'START_EARNINGS_BATCH_SCAN') {
         const { orders, batchSize = 5 } = message.payload as { orders: any[]; batchSize?: number };
@@ -412,28 +435,6 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           }
         }
         
-        return { success: true };
-      }
-      
-      // Finance Reconciliation scan messages
-      if (msgType === 'START_FINANCE_SCAN') {
-        const { runId, startUrl } = message.payload as { runId: string; startUrl: string };
-        await startFinanceScan(runId, startUrl);
-        return { success: true };
-      }
-      
-      if (msgType === 'PAUSE_FINANCE_SCAN') {
-        pauseFinanceScan();
-        return { success: true };
-      }
-      
-      if (msgType === 'RESUME_FINANCE_SCAN') {
-        resumeFinanceScan();
-        return { success: true };
-      }
-      
-      if (msgType === 'STOP_FINANCE_SCAN') {
-        stopFinanceScan();
         return { success: true };
       }
       

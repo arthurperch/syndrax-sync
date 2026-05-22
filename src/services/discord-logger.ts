@@ -40,6 +40,100 @@ async function sendWebhook(channel: WebhookChannel, embed: object, username?: st
   }
 }
 
+// ─────────────────────────────────────────────
+// DAILY STATS TRACKING - CUMULATIVE
+// ─────────────────────────────────────────────
+
+// Initialize or get daily stats
+export async function getDailyStats(): Promise<DailyStats> {
+  const result = await chrome.storage.local.get('syndrax_daily_stats');
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Reset if it's a new day
+  if (result.syndrax_daily_stats?.date !== today) {
+    const freshStats: DailyStats = createFreshDailyStats(today);
+    await chrome.storage.local.set({ syndrax_daily_stats: freshStats });
+    return freshStats;
+  }
+  
+  return result.syndrax_daily_stats || createFreshDailyStats(today);
+}
+
+interface DailyStats {
+  [key: string]: unknown; // Index signature for dynamic access
+  date: string;
+  // Sync tracking
+  syncsStarted: number;
+  syncsCompleted: number;
+  totalPagesScanned: number;
+  totalItemsScanned: number;
+  // Price changes
+  priceUpdates: number;
+  priceIncreased: number;
+  priceDecreased: number;
+  totalPriceChangeAmount: number;
+  // Stock changes
+  itemsSetOutOfStock: number;
+  itemsBackInStock: number;
+  qtyZeroed: number;
+  // Variants
+  variantsDetected: number;
+  variantMismatches: number;
+  childAsinsStored: number;
+  // Fingerprint
+  baselinesCapture: number;
+  fingerprintFlags: number;
+  fingerprintDelists: number;
+  // Errors
+  scrapeErrors: number;
+  asinRemoved: number;
+  asinHijacked: number;
+  noAsin: number;
+  captchaHits: number;
+  // Current session tracking
+  currentSyncSequence: number;
+  currentSyncStartTime: number;
+  currentSyncPagesCompleted: number;
+  // Item lists (limited to 50 for memory)
+  outOfStockItems: Array<{ title: string; listingId: string; asin: string; variantLabel?: string; timestamp: number }>;
+  priceChangeItems: Array<{ title: string; listingId: string; oldPrice: number; newPrice: number; direction: string; timestamp: number }>;
+  restockedItems: Array<{ title: string; listingId: string; asin: string; timestamp: number }>;
+}
+
+function createFreshDailyStats(date: string): DailyStats {
+  return {
+    date,
+    syncsStarted: 0,
+    syncsCompleted: 0,
+    totalPagesScanned: 0,
+    totalItemsScanned: 0,
+    priceUpdates: 0,
+    priceIncreased: 0,
+    priceDecreased: 0,
+    totalPriceChangeAmount: 0,
+    itemsSetOutOfStock: 0,
+    itemsBackInStock: 0,
+    qtyZeroed: 0,
+    variantsDetected: 0,
+    variantMismatches: 0,
+    childAsinsStored: 0,
+    baselinesCapture: 0,
+    fingerprintFlags: 0,
+    fingerprintDelists: 0,
+    scrapeErrors: 0,
+    asinRemoved: 0,
+    asinHijacked: 0,
+    noAsin: 0,
+    captchaHits: 0,
+    currentSyncSequence: 0,
+    currentSyncStartTime: 0,
+    currentSyncPagesCompleted: 0,
+    outOfStockItems: [],
+    priceChangeItems: [],
+    restockedItems: []
+  };
+}
+
 // Helper to increment daily stat and optionally store item data
 export async function incrementStat(
   key: string,
@@ -53,28 +147,81 @@ export async function incrementStat(
     variantLabel?: string;
   }
 ): Promise<void> {
-  const result = await chrome.storage.local.get('syndrax_daily_stats');
-  const stats = result.syndrax_daily_stats || {};
-  stats[key] = (stats[key] || 0) + 1;
+  const stats = await getDailyStats();
+  (stats as Record<string, unknown>)[key] = ((stats as Record<string, unknown>)[key] as number || 0) + 1;
 
-  if (key === 'outOfStock' && itemData) {
+  if (key === 'itemsSetOutOfStock' && itemData) {
     stats.qtyZeroed = (stats.qtyZeroed || 0) + 1;
     stats.outOfStockItems = [
-      ...(stats.outOfStockItems || []),
-      { title: itemData.title, listingId: itemData.listingId, asin: itemData.asin, variantLabel: itemData.variantLabel }
+      ...stats.outOfStockItems,
+      { title: itemData.title || '', listingId: itemData.listingId || '', asin: itemData.asin || '', variantLabel: itemData.variantLabel, timestamp: Date.now() }
     ].slice(-50);
   }
 
   if (key === 'priceUpdates' && itemData) {
     if (itemData.direction === 'up') stats.priceIncreased = (stats.priceIncreased || 0) + 1;
     if (itemData.direction === 'down') stats.priceDecreased = (stats.priceDecreased || 0) + 1;
+    if (itemData.oldPrice && itemData.newPrice) {
+      stats.totalPriceChangeAmount += Math.abs(itemData.newPrice - itemData.oldPrice);
+    }
     stats.priceChangeItems = [
-      ...(stats.priceChangeItems || []),
-      { title: itemData.title, listingId: itemData.listingId, oldPrice: itemData.oldPrice, newPrice: itemData.newPrice, direction: itemData.direction }
+      ...stats.priceChangeItems,
+      { title: itemData.title || '', listingId: itemData.listingId || '', oldPrice: itemData.oldPrice || 0, newPrice: itemData.newPrice || 0, direction: itemData.direction || '', timestamp: Date.now() }
+    ].slice(-50);
+  }
+  
+  if (key === 'itemsBackInStock' && itemData) {
+    stats.restockedItems = [
+      ...stats.restockedItems,
+      { title: itemData.title || '', listingId: itemData.listingId || '', asin: itemData.asin || '', timestamp: Date.now() }
     ].slice(-50);
   }
 
   await chrome.storage.local.set({ syndrax_daily_stats: stats });
+}
+
+// Track sync session start
+export async function trackSyncStart(): Promise<number> {
+  const stats = await getDailyStats();
+  stats.syncsStarted++;
+  stats.currentSyncSequence = 0;
+  stats.currentSyncStartTime = Date.now();
+  stats.currentSyncPagesCompleted = 0;
+  await chrome.storage.local.set({ syndrax_daily_stats: stats });
+  return stats.syncsStarted;
+}
+
+// Track each item processed (sequence count)
+export async function trackItemProcessed(): Promise<number> {
+  const stats = await getDailyStats();
+  stats.currentSyncSequence++;
+  stats.totalItemsScanned++;
+  await chrome.storage.local.set({ syndrax_daily_stats: stats });
+  return stats.currentSyncSequence;
+}
+
+// Track page completion
+export async function trackPageComplete(pageNum: number, pageStats: {
+  checked: number;
+  updated: number;
+  outOfStock: number;
+  errors: number;
+}): Promise<void> {
+  const stats = await getDailyStats();
+  stats.totalPagesScanned++;
+  stats.currentSyncPagesCompleted = pageNum;
+  await chrome.storage.local.set({ syndrax_daily_stats: stats });
+  
+  // Send page completion webhook with cumulative totals
+  await discord.syncPageComplete(pageNum, pageStats, stats);
+}
+
+// Track sync completion
+export async function trackSyncComplete(): Promise<DailyStats> {
+  const stats = await getDailyStats();
+  stats.syncsCompleted++;
+  await chrome.storage.local.set({ syndrax_daily_stats: stats });
+  return stats;
 }
 
 // Ping test all webhooks to verify connections
@@ -547,6 +694,46 @@ export const discord = {
     timestamp: new Date().toISOString(),
     footer: { text: `Moving to page ${pageNum + 1}...` }
   }),
+
+  // Page complete with cumulative daily stats
+  syncPageComplete: (pageNum: number, pageStats: {
+    checked: number;
+    updated: number;
+    outOfStock: number;
+    errors: number;
+  }, dailyStats: DailyStats) => {
+    const duration = dailyStats.currentSyncStartTime 
+      ? Math.round((Date.now() - dailyStats.currentSyncStartTime) / 1000 / 60)
+      : 0;
+    
+    return sendWebhook('logs', {
+      title: `📄 PAGE ${pageNum} COMPLETE — Cumulative Stats`,
+      description: [
+        `🕐 **Time:** ${getTimeString()}`,
+        `⏱️ **Sync Duration:** ${duration} min`,
+        `📄 **Page ${pageNum}** finished`,
+        ``,
+        `${'─'.repeat(30)}`,
+      ].join('\n'),
+      color: 0x7A5CFF,
+      fields: [
+        // This Page stats
+        { name: '📄 This Page', value: `**${pageStats.checked}** checked`, inline: true },
+        { name: '💰 Page Updates', value: `**${pageStats.updated}**`, inline: true },
+        { name: '🚫 Page OOS', value: `**${pageStats.outOfStock}**`, inline: true },
+        // Cumulative daily totals
+        { name: '─── TODAY\'S TOTALS ───', value: '\u200b', inline: false },
+        { name: '📦 Total Scanned', value: `**${dailyStats.totalItemsScanned}**`, inline: true },
+        { name: '📄 Pages Done', value: `**${dailyStats.totalPagesScanned}**`, inline: true },
+        { name: '🔄 Syncs Today', value: `**${dailyStats.syncsStarted}**`, inline: true },
+        { name: '💰 Price Changes', value: `📈 ${dailyStats.priceIncreased} up\n📉 ${dailyStats.priceDecreased} down`, inline: true },
+        { name: '🚫 Stock Changes', value: `❌ ${dailyStats.itemsSetOutOfStock} OOS\n✅ ${dailyStats.itemsBackInStock} back`, inline: true },
+        { name: '❌ Errors', value: `**${dailyStats.scrapeErrors + dailyStats.noAsin}**`, inline: true },
+      ],
+      timestamp: new Date().toISOString(),
+      footer: { text: `Sync #${dailyStats.syncsStarted} | Sequence ${dailyStats.currentSyncSequence} | ${getTimeString()}` }
+    });
+  },
 
   dryRunComplete: (results: {
     wouldUpdate: number;

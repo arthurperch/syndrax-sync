@@ -202,6 +202,7 @@ function extractOrderIdFromUrl(): string {
 /**
  * Extract shipping address from page
  * Parses the eBay mesh order details address block
+ * Uses content-based detection instead of fragile div index positions
  */
 function extractShippingAddress(): ShippingAddress {
     const address: ShippingAddress = {
@@ -216,71 +217,113 @@ function extractShippingAddress(): ShippingAddress {
     try {
         console.log('🔍 Extracting shipping address...');
         
-        // Find the shipping address container
-        const shipToContainer = document.querySelector('.ship-to');
-        console.log('📍 Ship-to container:', shipToContainer ? 'Found' : 'NOT FOUND');
+        // Find the shipping address container using multiple selectors
+        const addressContainer = document.querySelector('.ship-to .address') || 
+                                  document.querySelector('.ship-to') || 
+                                  document.querySelector('.shipping-address, [class*="ship-to"], [class*="shipping"]');
         
-        if (!shipToContainer) {
-            // Try alternate selectors
-            const altContainer = document.querySelector('.shipping-address, [class*="ship-to"], [class*="shipping"]');
-            if (!altContainer) {
-                console.error('❌ Cannot find shipping address container');
-                return address;
-            }
-        }
-
-        // Find all tooltip buttons with address data - each button has the text content
-        const addressContainer = document.querySelector('.ship-to .address') || document.querySelector('.address');
         console.log('📍 Address container:', addressContainer ? 'Found' : 'NOT FOUND');
         
         if (!addressContainer) {
+            console.error('❌ Cannot find shipping address container');
             return address;
         }
 
-        // Get all direct child divs of the address container
-        const addressDivs = addressContainer.querySelectorAll(':scope > div');
-        console.log(`📍 Found ${addressDivs.length} address divs`);
-
-        addressDivs.forEach((div, index) => {
-            // Each div contains tooltip buttons with the actual text
-            const buttons = div.querySelectorAll('.tooltip button, button.tooltip__host');
-            const parts: string[] = [];
-            
-            buttons.forEach(btn => {
-                const text = btn.textContent?.trim();
-                if (text && text.length > 0) {
-                    parts.push(text);
-                }
-            });
-            
-            console.log(`📍 Div ${index} parts:`, parts);
-
-            if (index === 0 && parts.length > 0) {
-                // First div = Name
-                address.fullName = parts[0];
-            } else if (index === 1 && parts.length > 0) {
-                // Second div = Street address
-                address.street = parts.join(' ');
-            } else if (index === 2) {
-                // Third div = City, State, ZIP (separate buttons)
-                if (parts.length >= 3) {
-                    address.city = parts[0];
-                    address.state = parts[1];
-                    address.zipCode = parts[2];
-                } else if (parts.length === 2) {
-                    address.city = parts[0];
-                    // State and ZIP might be combined
-                    const stateZip = parts[1].match(/([A-Z]{2})\s*([\d-]+)/);
-                    if (stateZip) {
-                        address.state = stateZip[1];
-                        address.zipCode = stateZip[2];
-                    }
-                }
-            } else if (index === 3 && parts.length > 0) {
-                // Fourth div = Country
-                address.country = parts[0];
+        // Collect all text parts from buttons (eBay uses tooltip buttons for address parts)
+        const buttons = addressContainer.querySelectorAll('.tooltip button, button.tooltip__host, button');
+        const allParts: string[] = [];
+        
+        buttons.forEach(btn => {
+            const text = btn.textContent?.trim();
+            if (text && text.length > 0 && !text.includes('Copy') && !text.includes('Edit')) {
+                allParts.push(text);
             }
         });
+        
+        console.log('📍 All address parts:', allParts);
+
+        // Parse address parts using pattern matching instead of index positions
+        const streetPatterns = [/^\d+\s+\w/, /^PO\s*Box/i, /^P\.?O\.?\s*Box/i, /Apt|Suite|Unit|#|\d{2,}/i];
+        const statePattern = /^[A-Z]{2}$/;
+        const zipPattern = /^\d{5}(-\d{4})?$/;
+        const countryPatterns = ['United States', 'Canada', 'UK', 'Australia', 'Germany', 'France'];
+        
+        let nameSet = false;
+        const streetParts: string[] = [];
+        
+        for (let i = 0; i < allParts.length; i++) {
+            const part = allParts[i];
+            
+            // Check if it's a ZIP code
+            if (zipPattern.test(part)) {
+                address.zipCode = part;
+                continue;
+            }
+            
+            // Check if it's a state abbreviation (2 uppercase letters)
+            if (statePattern.test(part) && !address.state) {
+                address.state = part;
+                continue;
+            }
+            
+            // Check if it's a country
+            if (countryPatterns.some(c => part.toLowerCase().includes(c.toLowerCase()))) {
+                address.country = part;
+                continue;
+            }
+            
+            // Check if it looks like a street address
+            const looksLikeStreet = streetPatterns.some(p => p.test(part));
+            
+            // First non-pattern part is likely the name
+            if (!nameSet && !looksLikeStreet && !address.fullName) {
+                address.fullName = part;
+                nameSet = true;
+                continue;
+            }
+            
+            // If we have a name and this isn't city/state/zip, it's probably street or city
+            if (nameSet) {
+                // Check if this could be city (usually before state)
+                const nextPart = allParts[i + 1];
+                if (nextPart && statePattern.test(nextPart) && !address.city) {
+                    address.city = part;
+                    continue;
+                }
+                
+                // Otherwise it's part of the street address
+                if (!address.city && !looksLikeStreet && !zipPattern.test(part) && !statePattern.test(part)) {
+                    // Could be city if next is state
+                    const nextIdx = i + 1;
+                    if (nextIdx < allParts.length && statePattern.test(allParts[nextIdx])) {
+                        address.city = part;
+                    } else {
+                        streetParts.push(part);
+                    }
+                } else if (looksLikeStreet) {
+                    streetParts.push(part);
+                }
+            }
+        }
+        
+        // Combine street parts
+        if (streetParts.length > 0) {
+            address.street = streetParts.join(' ');
+        }
+        
+        // If city wasn't found, look for city/state/zip pattern in remaining parts
+        if (!address.city) {
+            for (const part of allParts) {
+                // Match "City, State ZIP" or "City State ZIP" patterns
+                const cityStateZip = part.match(/^([A-Za-z\s]+),?\s*([A-Z]{2})\s*(\d{5}(-\d{4})?)$/);
+                if (cityStateZip) {
+                    address.city = cityStateZip[1].trim();
+                    address.state = cityStateZip[2];
+                    address.zipCode = cityStateZip[3];
+                    break;
+                }
+            }
+        }
 
         // Extract phone number - it's in a separate dl.phone element
         const phoneElement = document.querySelector('.phone button, dl.phone button, .phone .tooltip button');
