@@ -60,3 +60,63 @@ _Managed by Hermes Agent. Do not edit manually._
 **Files:** src/
 **Expected Output:** Default markup 2x, minimum 1.1x enforced. Commit [HERMES-TASK-005] and push.
 **Results:** Updated background-service.ts with DEFAULT_MARKUP=2.0, MIN_MARKUP=1.1, enforced with Math.max(). Updated storage.ts default markupPercent from 30 to 200 (2.0x).
+
+---
+
+## TASK-006
+**Status:** PENDING
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** FEATURE
+**Description:** Build ResearchTool. Create src/services/research.ts. Function searchAmazon(query: string) that uses CDP to open amazon.com/s?k=query, scrape top 10 results: ASIN, title, price, rating, review count, image URL. Return as AmazonProduct[]. Add error handling and retry logic using existing retryAsync().
+**Files:** src/services/research.ts (new file)
+**Expected Output:** Working Amazon search scraper. Commit [HERMES-TASK-006] and push.
+**Results:**
+
+---
+
+## TASK-007
+**Status:** PENDING
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** FEATURE
+**Description:** Build ComplianceFilter. Create src/services/compliance.ts. Function checkCompliance(product: AmazonProduct) that runs all 7 risk filters from COMPLIANCE.md: VERO brand check, banned items check, price threshold check, margin check (minimum 15% net), review count minimum 10, rating minimum 3.5, title keyword blacklist. Return {passed: boolean, reasons: string[]}.
+**Files:** src/services/compliance.ts (new file)
+**Expected Output:** Working compliance filter. Commit [HERMES-TASK-007] and push.
+**Results:**
+
+---
+
+## TASK-008
+**Status:** PENDING
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** FEATURE
+**Description:** Build EbayLister. Create src/services/lister.ts. Function createListing(product: AmazonProduct) that calculates eBay price using 2x markup, builds listing object with title, price, description, images. Apply markup from storage settings. Return EbayListing object ready for submission.
+**Files:** src/services/lister.ts (new file)
+**Expected Output:** Working listing builder. Commit [HERMES-TASK-008] and push.
+**Results:**
+
+---
+
+## TASK-009
+**Status:** PENDING
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** FEATURE
+**Description:** Build DiscordReporter. Update src/services/discord-logger.ts to add reportResearchResult(product: AmazonProduct, listing: EbayListing, compliance: ComplianceResult) function. Posts formatted Discord message to webhook with: product title, Amazon price, eBay price, margin %, compliance status, ASIN, direct Amazon link.
+**Files:** src/services/discord-logger.ts
+**Expected Output:** Discord reporting for each researched product. Commit [HERMES-TASK-009] and push.
+**Results:**
+
+---
+
+## TASK-010
+**Status:** PENDING
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** FEATURE
+**Description:** Wire everything together in src/background-service.ts. Add runResearchPipeline(query: string) function that: calls searchAmazon(), loops results, runs checkCompliance() on each, for passing products calls createListing(), calls reportResearchResult(). Add a setInterval to run pipeline every 4 hours with queries from a hardcoded seed list: ["phone case", "laptop stand", "cable organizer", "desk lamp", "phone holder"].
+**Files:** src/background-service.ts
+**Expected Output:** Full automated pipeline running every 4 hours. Commit [HERMES-TASK-010] and push.
+**Results:**
