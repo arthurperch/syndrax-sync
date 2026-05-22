@@ -1,4 +1,5 @@
 import { WEBHOOKS, type WebhookChannel } from '../config/webhooks.config';
+import { retryFetch } from './retry';
 
 // MAX_ARRAY_SIZE limit to prevent unbounded array growth
 const MAX_ARRAY_SIZE = 1000;
