@@ -13,15 +13,7 @@ const webhookNames: Record<WebhookChannel, string> = {
 // Get human-readable time
 function getTimeString(): string {
   const now = new Date();
-  return now.toLocaleString('en-US', { 
-    weekday: 'short',
-    month: 'short', 
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'America/Los_Angeles'
-  });
+  return now.toISOString();
 }
 
 async function sendWebhook(channel: WebhookChannel, embed: object, username?: string) {

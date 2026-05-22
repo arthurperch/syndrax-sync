@@ -210,7 +210,7 @@ async function buildDailySummary() {
   const result = await chrome.storage.local.get('syndrax_daily_stats');
   const stats = result.syndrax_daily_stats || {};
   return {
-    date: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+    date: new Date().toISOString().split('T')[0],
     totalScanned: stats.totalScanned || 0,
     priceUpdates: stats.priceUpdates || 0,
     outOfStock: stats.outOfStock || 0,

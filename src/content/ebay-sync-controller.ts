@@ -77,7 +77,7 @@ async function pingAllWebhooks(): Promise<void> {
   console.log('[Sync] 🔔 Testing all webhook connections...');
   logToPanel('🔔 Testing Discord webhook connections...', 'info');
   
-  const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const timestamp = new Date().toISOString();
   const channels = Object.keys(WEBHOOKS) as (keyof typeof WEBHOOKS)[];
   const results: { channel: string; success: boolean }[] = [];
   
@@ -146,7 +146,7 @@ async function sendSyncStartedWebhook(totalItems: number) {
         avatar_url: 'https://syndrax.io/assets/images/logo.png',
         embeds: [{
           title: '⚡ SYNC STARTED',
-          description: `Starting inventory sync at ${new Date().toLocaleTimeString()}`,
+          description: `Starting inventory sync at ${new Date().toISOString()}`,
           color: 0x00CFFF,
           fields: [
             { name: '📦 Listings Found', value: `${totalItems} items`, inline: true },
