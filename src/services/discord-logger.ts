@@ -1,5 +1,8 @@
 import { WEBHOOKS, type WebhookChannel } from '../config/webhooks.config';
 
+// MAX_ARRAY_SIZE limit to prevent unbounded array growth
+const MAX_ARRAY_SIZE = 1000;
+
 const webhookNames: Record<WebhookChannel, string> = {
   logs:           'Syndrax Sync',
   errors:         'Syndrax Alert System',
@@ -147,7 +150,7 @@ export async function incrementStat(
     stats.outOfStockItems = [
       ...stats.outOfStockItems,
       { title: itemData.title || '', listingId: itemData.listingId || '', asin: itemData.asin || '', variantLabel: itemData.variantLabel, timestamp: Date.now() }
-    ].slice(-50);
+    ].slice(-MAX_ARRAY_SIZE);
   }
 
   if (key === 'priceUpdates' && itemData) {
@@ -159,7 +162,7 @@ export async function incrementStat(
     stats.priceChangeItems = [
       ...stats.priceChangeItems,
       { title: itemData.title || '', listingId: itemData.listingId || '', oldPrice: itemData.oldPrice || 0, newPrice: itemData.newPrice || 0, direction: itemData.direction || '', timestamp: Date.now() }
-    ].slice(-50);
+    ].slice(-MAX_ARRAY_SIZE);
   }
   
   if (key === 'itemsBackInStock' && itemData) {
