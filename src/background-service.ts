@@ -1102,3 +1102,151 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
   }
 });
+
+// ==================== RESEARCH PIPELINE ====================
+// TASK-010: Wire everything together
+
+import { searchAmazon, type AmazonProduct } from './services/research';
+import { checkCompliance, type ComplianceResult } from './services/compliance';
+import { createListing, type EbayListing } from './services/lister';
+
+// Research pipeline seed queries
+const RESEARCH_QUERIES = [
+  'phone case',
+  'laptop stand',
+  'cable organizer',
+  'desk lamp',
+  'phone holder'
+];
+
+// Track research pipeline state
+interface ResearchPipelineState {
+  isRunning: boolean;
+  currentQuery: string;
+  productsProcessed: number;
+  productsApproved: number;
+  productsFlagged: number;
+  startTime: number;
+}
+
+let researchPipelineState: ResearchPipelineState = {
+  isRunning: false,
+  currentQuery: '',
+  productsProcessed: 0,
+  productsApproved: 0,
+  productsFlagged: 0,
+  startTime: 0
+};
+
+/**
+ * Run the complete research pipeline for a given query
+ * 1. Search Amazon for products
+ * 2. Check compliance for each product
+ * 3. Create eBay listings for approved products
+ * 4. Report results to Discord
+ */
+async function runResearchPipeline(query: string): Promise<void> {
+  if (researchPipelineState.isRunning) {
+    console.log('[Research] Pipeline already running, skipping');
+    return;
+  }
+
+  researchPipelineState.isRunning = true;
+  researchPipelineState.currentQuery = query;
+  researchPipelineState.productsProcessed = 0;
+  researchPipelineState.productsApproved = 0;
+  researchPipelineState.productsFlagged = 0;
+  researchPipelineState.startTime = Date.now();
+
+  console.log(`[Research] Starting pipeline for query: "${query}"`);
+
+  try {
+    // Step 1: Search Amazon
+    console.log(`[Research] Searching Amazon for: "${query}"`);
+    const products = await searchAmazon(query);
+    console.log(`[Research] Found ${products.length} products`);
+
+    if (products.length === 0) {
+      console.log(`[Research] No products found for query: "${query}"`);
+      await discord.reportResearchResult(
+        { title: `No results for "${query}"`, asin: 'N/A', price: 0, rating: 0, reviewCount: 0, imageUrl: '', productUrl: '' },
+        null,
+        { passed: false, reasons: ['No products found'], riskLevel: 'MEDIUM', filtersFailed: [] }
+      );
+      return;
+    }
+
+    // Step 2-4: Process each product
+    for (const product of products) {
+      researchPipelineState.productsProcessed++;
+
+      try {
+        // Check compliance
+        const compliance = checkCompliance(product);
+        console.log(`[Research] Product: ${product.title.substring(0, 50)}`);
+        console.log(`[Research] Compliance: ${compliance.passed ? 'PASSED' : 'FAILED'}`);
+
+        let listing: EbayListing | null = null;
+
+        // If passed compliance, create listing
+        if (compliance.passed) {
+          listing = await createListing(product);
+          researchPipelineState.productsApproved++;
+          console.log(`[Research] Listing created: $${listing.price.toFixed(2)} (${listing.margin.toFixed(1)}% margin)`);
+        } else {
+          researchPipelineState.productsFlagged++;
+          console.log(`[Research] Product flagged: ${compliance.reasons.join(', ')}`);
+        }
+
+        // Report to Discord
+        await discord.reportResearchResult(product, listing, compliance);
+
+        // Small delay between products
+        await new Promise(r => setTimeout(r, 500));
+      } catch (err) {
+        console.error(`[Research] Error processing product:`, err);
+        await storage.addActivity(`Research error: ${String(err).substring(0, 100)}`, 'error');
+      }
+    }
+
+    // Pipeline complete
+    const duration = Math.round((Date.now() - researchPipelineState.startTime) / 1000 / 60);
+    console.log(`[Research] Pipeline complete for "${query}"`);
+    console.log(`[Research] Processed: ${researchPipelineState.productsProcessed}, Approved: ${researchPipelineState.productsApproved}, Flagged: ${researchPipelineState.productsFlagged}`);
+    console.log(`[Research] Duration: ${duration} minutes`);
+
+    await storage.addActivity(
+      `Research pipeline complete: ${researchPipelineState.productsApproved} approved, ${researchPipelineState.productsFlagged} flagged`,
+      'success'
+    );
+  } catch (err) {
+    console.error('[Research] Pipeline error:', err);
+    await storage.addActivity(`Research pipeline error: ${String(err).substring(0, 100)}`, 'error');
+  } finally {
+    researchPipelineState.isRunning = false;
+  }
+}
+
+/**
+ * Start the research pipeline scheduler
+ * Runs every 4 hours with the seed query list
+ */
+function startResearchScheduler(): void {
+  console.log('[Research] Starting research scheduler (every 4 hours)');
+
+  // Run immediately on startup
+  const runNextQuery = async () => {
+    const query = RESEARCH_QUERIES[Math.floor(Math.random() * RESEARCH_QUERIES.length)];
+    console.log(`[Research] Running scheduled pipeline for: "${query}"`);
+    await runResearchPipeline(query);
+  };
+
+  // Run first query after 1 minute
+  setTimeout(runNextQuery, 60000);
+
+  // Then run every 4 hours (14400000 ms)
+  setInterval(runNextQuery, 4 * 60 * 60 * 1000);
+}
+
+// Start research scheduler on extension load
+startResearchScheduler();

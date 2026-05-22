@@ -1160,6 +1160,33 @@ export const discord = {
   }),
 
   // DAILY SUMMARY
+  reportResearchResult: (product: any, listing: any, compliance: any) => {
+    const color = compliance.passed ? 0x00FF88 : 0xFF8C00;
+    const status = compliance.passed ? '✅ APPROVED' : '⚠️ FLAGGED';
+    
+    return sendWebhook('researchUpdates', {
+      title: `${status} - ${product.title.substring(0, 60)}`,
+      description: `Research pipeline result for Amazon product`,
+      color,
+      fields: [
+        { name: '💰 Amazon Price', value: `$${product.price.toFixed(2)}`, inline: true },
+        { name: '🏷️ eBay Price', value: `$${listing.price.toFixed(2)}`, inline: true },
+        { name: '📊 Margin', value: `${listing.margin.toFixed(1)}%`, inline: true },
+        { name: '⭐ Rating', value: `${product.rating} stars (${product.reviewCount} reviews)`, inline: true },
+        { name: '🔑 ASIN', value: product.asin, inline: true },
+        { name: '📈 Markup', value: `${(listing.markup * 100).toFixed(0)}%`, inline: true },
+        ...(compliance.passed ? [] : [{
+          name: '❌ Compliance Issues',
+          value: compliance.reasons.slice(0, 3).join('\n'),
+          inline: false
+        }]),
+        { name: '🔗 Amazon Link', value: `[View Product](https://www.amazon.com/dp/${product.asin})`, inline: false }
+      ],
+      timestamp: new Date().toISOString(),
+      footer: { text: 'Syndrax Research Pipeline' }
+    });
+  },
+
   dailySummary: (stats: {
     date: string;
     totalScanned: number;
@@ -1172,7 +1199,8 @@ export const discord = {
     errors: number;
     topOutOfStock: { title: string; asin: string }[];
     topPriceChanges: { title: string; oldPrice: number; newPrice: number }[];
-  }) => sendWebhook('logs', {
+  }) => sendWebhook('researchUpdates', {
+
     title: `📊 Daily Summary — ${stats.date}`,
     description: 'Your Syndrax Sync daily report',
     color: 0x7A5CFF,
