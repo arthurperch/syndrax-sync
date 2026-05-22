@@ -52,11 +52,11 @@ _Managed by Hermes Agent. Do not edit manually._
 ---
 
 ## TASK-005
-**Status:** PENDING
+**Status:** COMPLETE
 **Priority:** HIGH
 **Assigned:** Cline
 **Type:** BUG_FIX
 **Description:** Fix markup settings. Find pricing/markup logic in src/. Set default markup to 2.0 (2x). Add minimum markup enforcement of 1.1 (10%). Prevent any markup below 1.1 from being saved.
 **Files:** src/
 **Expected Output:** Default markup 2x, minimum 1.1x enforced. Commit [HERMES-TASK-005] and push.
-**Results:**
+**Results:** Updated background-service.ts with DEFAULT_MARKUP=2.0, MIN_MARKUP=1.1, enforced with Math.max(). Updated storage.ts default markupPercent from 30 to 200 (2.0x).

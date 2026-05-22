@@ -831,7 +831,10 @@ function scrapeAmazonTab(tabId: number, item: AmazonCheckItem): Promise<AmazonSc
 
 // Process decision based on Amazon data
 function processDecision(item: AmazonCheckItem, amazonData: AmazonScrapeData | null): AmazonResult {
-  const MARKUP = 2; // 100% markup = 2x
+  // Markup settings: default 2.0 (2x), minimum 1.1 (10%)
+  const DEFAULT_MARKUP = 2.0;
+  const MIN_MARKUP = 1.1;
+  const MARKUP = Math.max(DEFAULT_MARKUP, MIN_MARKUP); // Enforce minimum
   const THRESHOLD = 5; // 5% change threshold
 
   console.log('[BG] processDecision for', item.asin, 'amazonData:', amazonData);

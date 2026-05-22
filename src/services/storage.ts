@@ -144,10 +144,10 @@ export const storage = {
     await this.set(KEYS.INVENTORY, items);
   },
 
-  async getSettings(): Promise<Settings> {
-    const defaults: Settings = {
-      markupPercent: 30,
-      priceChangeThreshold: 5,
+   async getSettings(): Promise<Settings> {
+     const defaults: Settings = {
+       markupPercent: 200, // Default 2.0x markup (100% profit)
+       priceChangeThreshold: 5,
       defaultSupplier: 'amazon',
       dailySyncTime: '06:00',
       debugMode: false
