@@ -24,3 +24,15 @@ _Managed by Hermes Agent. Do not edit manually._
 **Files:** src/ (all .ts and .tsx files)
 **Expected Output:** All timestamps normalized to UTC. Commit with [HERMES-TASK-002] then push to origin master.
 **Results:**
+
+---
+
+## TASK-003
+**Status:** IN-PROGRESS
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** BRIDGE_TEST
+**Description:** Full loop verification test for Hermes-Cline bridge integration.
+**Files:** All
+**Expected Output:** Commit with [HERMES-TASK-003] then push to origin master.
+**Results:**
