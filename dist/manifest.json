@@ -87,7 +87,7 @@
     },
     {
       "js": [
-        "assets/aliexpress-fulfillment.ts-e8af6fd4.js"
+        "assets/aliexpress-fulfillment.ts-e7692e87.js"
       ],
       "matches": [
         "*://*.aliexpress.com/*"
@@ -126,7 +126,7 @@
     },
     {
       "js": [
-        "assets/finance-ebay-scanner.ts-10c83193.js"
+        "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "matches": [
         "*://*.ebay.com/mys/sold*",
@@ -187,7 +187,7 @@
       "resources": [
         "assets/ebay-order-extractor.ts-87d4c536.js",
         "assets/ebay-listing-creator.ts-da16a0e4.js",
-        "assets/finance-ebay-scanner.ts-10c83193.js"
+        "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "use_dynamic_url": false
     },
@@ -217,7 +217,7 @@
       ],
       "resources": [
         "assets/aliexpress-price-checker.ts-dbf94a29.js",
-        "assets/aliexpress-fulfillment.ts-e8af6fd4.js"
+        "assets/aliexpress-fulfillment.ts-e7692e87.js"
       ],
       "use_dynamic_url": false
     },

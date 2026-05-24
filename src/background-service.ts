@@ -101,9 +101,11 @@ async function processEarningsBatch(): Promise<void> {
         active: false
       });
       
-      if (tab.id) {
+      if (tab && typeof tab.id === 'number') {
         activeTabs.set(tab.id, order.orderId);
         console.log(`🔗 Opened tab ${tab.id} for order ${order.orderId}`);
+      } else {
+        console.error(`❌ Failed to get valid tab ID for ${order.orderId}`);
       }
     } catch (error) {
       console.error(`❌ Error opening tab for ${order.orderId}:`, error);
@@ -954,8 +956,22 @@ async function startFinanceScan(runId: string, startUrl: string): Promise<void> 
   
   console.log('💼 Opened eBay sold page, tab ID:', tab.id);
   
-  // Wait for page to load, then start extraction
-  // The content script will handle the extraction
+  // Set up listener for when the tab finishes loading
+  if (tab.id) {
+    const tabId = tab.id;
+    const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (updatedTabId === tabId && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        // Wait 1500ms for page to fully render, then send message to content script
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tabId, { type: 'FINANCE_PAGE_READY' }).catch((err) => {
+            console.error('💼 Failed to send FINANCE_PAGE_READY:', err);
+          });
+        }, 1500);
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+  }
 }
 
 async function handleFinanceScanPageReady(tabId: number): Promise<void> {

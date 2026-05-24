@@ -1,3 +1,17 @@
+// Vue reactivity helper - triggers Vue's reactive system
+function setVueInputValue(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype, 'value'
+  )?.set;
+  if (nativeInputValueSetter) {
+    nativeInputValueSetter.call(el, value);
+  } else {
+    el.value = value;
+  }
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 interface FulfillmentData {
   orderId: string;
   buyerName: string;
@@ -31,9 +45,7 @@ function fillInput(selector: string, value: string) {
   for (const input of inputs) {
     if (input && value) {
       input.focus();
-      input.value = value;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      setVueInputValue(input, value);
       input.dispatchEvent(new Event('blur', { bubbles: true }));
       return true;
     }
