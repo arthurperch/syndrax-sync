@@ -89,6 +89,16 @@ export interface Settings {
   vendor_temu_enabled?: boolean;
 }
 
+export interface OrderIntelligence {
+  route: 'amazon' | 'aliexpress' | 'manual';
+  confidence: 'high' | 'medium' | 'low';
+  reason: string;
+  margin: number;
+  supplierPrice: number;
+  profit: number;
+  riskFlags: Array<'LOW_MARGIN' | 'OUT_OF_STOCK' | 'UNKNOWN_ITEM' | 'PRICE_MISMATCH'>;
+}
+
 export interface ActivityItem {
   id: string;
   message: string;
