@@ -366,6 +366,7 @@ function createPanel() {
           <button id="sniper-research-btn" class="sniper-btn-secondary">🔍 Research</button>
           <button id="sniper-scan-btn" class="sniper-btn-secondary">📊 Scan</button>
           <button id="sniper-titlebuilder-btn" class="sniper-btn-secondary">✏️ Title Builder</button>
+          <button id="sniper-desc-btn" class="sniper-btn-secondary">📝 Description</button>
         </div>
       </div>
     </div>
@@ -420,6 +421,21 @@ function createPanel() {
       }
     });
     showToast('✏️ Title Builder ready — open extension popup', false);
+  });
+
+  // Description Builder button
+  panel.querySelector('#sniper-desc-btn')?.addEventListener('click', () => {
+    chrome.runtime.sendMessage({
+      type: 'OPEN_DESCRIPTION_BUILDER',
+      payload: {
+        title: currentData?.title || '',
+        brand: currentData?.brand || '',
+        bullets: currentData?.bullets || [],
+        price: currentData?.priceNum || 0,
+        asin: currentData?.asin || ''
+      }
+    });
+    showToast('📝 Description Builder opening...', false);
   });
 
   // Bullets toggle

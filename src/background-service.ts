@@ -671,6 +671,118 @@ Rules:
         }
       }
 
+      // ===== BULK LISTER — CHECK_VERO =====
+      if (msgType === 'CHECK_VERO') {
+        try {
+          const { title, brand } = message.payload as { title: string; brand: string };
+          const combined = (title + ' ' + brand).toLowerCase();
+
+          const matchedVero = VERO_BRANDS.find(b =>
+            typeof b === 'string' && b.length > 2 && combined.includes(b.toLowerCase())
+          );
+
+          if (matchedVero) {
+            return { blocked: true, reason: `VERO brand: ${matchedVero}` };
+          }
+          return { blocked: false, reason: '' };
+        } catch (e) {
+          return { blocked: false, reason: '' };
+        }
+      }
+
+      // ===== BULK LISTER — FETCH_AMAZON_PRODUCT =====
+      if (msgType === 'FETCH_AMAZON_PRODUCT') {
+        try {
+          const { asin } = message.payload as { asin: string };
+          const amazonUrl = `https://www.amazon.com/dp/${asin}`;
+
+          const tab = await chrome.tabs.create({ url: amazonUrl, active: false });
+          if (!tab.id) return { error: 'Could not open tab' };
+
+          await waitForTabLoad(tab.id, 20000);
+
+          // Scrape title, price, brand, image
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => {
+              const title = document.querySelector('#productTitle')?.textContent?.trim() ?? '';
+
+              // Price
+              let price = 0;
+              const priceSelectors = [
+                '#corePrice_feature_div .a-price .a-offscreen',
+                '#corePriceDisplay_desktop_feature_div .a-price .a-offscreen',
+                '#priceblock_ourprice',
+                '.a-price .a-offscreen',
+              ];
+              for (const sel of priceSelectors) {
+                const el = document.querySelector(sel);
+                if (el?.textContent) {
+                  const p = parseFloat(el.textContent.replace(/[^0-9.]/g, ''));
+                  if (p > 0) { price = p; break; }
+                }
+              }
+
+              // Brand
+              const brandEl =
+                document.querySelector('#bylineInfo') ??
+                document.querySelector('.po-brand .a-span9') ??
+                document.querySelector('#brand');
+              const brand = brandEl?.textContent?.trim().replace(/^(Visit the |Brand: )/i, '') ?? '';
+
+              // Image
+              const imgEl = document.querySelector('#landingImage, #imgBlkFront') as HTMLImageElement | null;
+              const image = imgEl?.src ?? '';
+
+              return { title, price, brand, image };
+            }
+          });
+
+          await chrome.tabs.remove(tab.id).catch(() => {});
+
+          const data = results[0]?.result;
+          if (!data || !data.title) {
+            return { error: 'Could not scrape product data' };
+          }
+          return { title: data.title, price: data.price, brand: data.brand, image: data.image };
+        } catch (e) {
+          return { error: String(e) };
+        }
+      }
+
+      // ===== BULK LISTER — CREATE_EBAY_LISTING (stub — full API in Session J) =====
+      if (msgType === 'CREATE_EBAY_LISTING') {
+        try {
+          const { asin, ebayPrice, title } = message.payload as { asin: string; ebayPrice: number; title: string };
+          console.log(`[BulkLister] CREATE_EBAY_LISTING stub — ASIN: ${asin}, Price: $${ebayPrice.toFixed(2)}, Title: ${title.substring(0, 50)}`);
+          // Full eBay API integration is Session J
+          return { success: true };
+        } catch (e) {
+          return { success: false, error: String(e) };
+        }
+      }
+
+      // ===== SESSION F — OPEN_DESCRIPTION_BUILDER =====
+      if (msgType === 'OPEN_DESCRIPTION_BUILDER') {
+        try {
+          const payload = message.payload as {
+            title: string;
+            brand: string;
+            bullets: string[];
+            price: number;
+            asin: string;
+          };
+          // Store prefill data for the bulklister page to pick up on mount
+          await chrome.storage.local.set({ desc_prefill: payload });
+          // Open bulklister.html in a new tab (Description Builder checks desc_prefill on mount)
+          await chrome.tabs.create({ url: chrome.runtime.getURL('bulklister.html') });
+          console.log(`[DescBuilder] OPEN_DESCRIPTION_BUILDER — ASIN: ${payload.asin}`);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }

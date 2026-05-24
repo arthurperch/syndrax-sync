@@ -16,6 +16,7 @@ import {
   ArrowUpDown, Filter, Eye, PenTool,
 } from "lucide-react";
 import TitleBuilder from './pages/TitleBuilder';
+import DescriptionBuilder from './components/DescriptionBuilder';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,7 @@ const pipeline = [
   { id: "04", key: "seller",       title: "Seller Verification", phase: "Phase 3", icon: UserCheck,    t: "pink"   as Tone, desc: "Account age • feedback % • units sold • Amazon match rate" },
   { id: "05", key: "dna",          title: "DNA Match",         phase: "Phase 4",   icon: Fingerprint,  t: "blue"   as Tone, desc: "AI vision matching • brand • model • color • materials" },
   { id: "06", key: "seo",          title: "SEO Generator",     phase: "Phase 5",   icon: FileText,     t: "violet" as Tone, desc: "Keyword analysis • competitor titles • optimized listing copy" },
+  { id: "06.5", key: "description", title: "Description Builder", phase: "Phase 5B", icon: PenTool,    t: "violet" as Tone, desc: "HTML description templates • 5 styles • variable substitution" },
   { id: "07", key: "lister",       title: "Bulk Lister",       phase: "Phase 6",   icon: UploadCloud,  t: "pink"   as Tone, desc: "eBay listings in bulk • pricing • markup • margin calculations" },
   { id: "08", key: "dashboard",    title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
   { id: "09", key: "finance",      title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
@@ -842,8 +844,8 @@ export default function App() {
     seo:          SEOView,
     finance:      FinanceView,
     reverse:      CompetitorView,
-    lister:       OrdersView,
     titlebuilder: TitleBuilder,
+    description:  ({ onBack }) => <DescriptionBuilder mode="popup" onBack={onBack} />,
   };
 
   const renderDetail = () => {
@@ -942,7 +944,18 @@ export default function App() {
                 </div>
                 <div className="space-y-2">
                   {pipeline.map((item, index) => (
-                    <PipelineRow key={item.key} item={item} index={index} onClick={() => setView(item.key)} />
+                    <PipelineRow
+                      key={item.key}
+                      item={item}
+                      index={index}
+                      onClick={() => {
+                        if (item.key === 'lister') {
+                          chrome.tabs.create({ url: chrome.runtime.getURL('bulklister.html') });
+                        } else {
+                          setView(item.key);
+                        }
+                      }}
+                    />
                   ))}
                   <SniperCard />
                 </div>

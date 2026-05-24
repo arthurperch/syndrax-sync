@@ -130,7 +130,7 @@ action: {
   
   web_accessible_resources: [
     {
-      resources: ['button1.mp3', 'dashboard.html'],
+      resources: ['button1.mp3', 'dashboard.html', 'bulklister.html'],
       matches: ['<all_urls>'],
     }
   ]
