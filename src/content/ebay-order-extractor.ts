@@ -94,22 +94,76 @@ function extractOrder() {
 
 function scrapeOrderData() {
   try {
+    // Extract buyer name from multiple possible selectors
     const buyerName = document.querySelector('[data-testid="buyer-name"], .buyer-info .name, [class*="buyer"] [class*="name"]')?.textContent?.trim() ||
                       document.querySelector('.ship-to-name, [class*="shipTo"] [class*="name"]')?.textContent?.trim() || '';
+    
+    // Extract address using pattern-based detection instead of fragile newline splitting
+    let buyerAddress = '';
+    let buyerCity = '';
+    let buyerState = '';
+    let buyerZip = '';
+    let buyerCountry = 'United States';
     
     const addressEl = document.querySelector('[data-testid="shipping-address"], .shipping-address, [class*="address"]');
     const addressText = addressEl?.textContent || '';
     
-    const addressParts = addressText.split('\n').map(s => s.trim()).filter(Boolean);
-    const buyerAddress = addressParts[0] || '';
+    // Normalize whitespace - replace multiple spaces/newlines with single space
+    const normalizedText = addressText.replace(/\s+/g, ' ').trim();
     
-    const cityStateZip = addressParts[1] || '';
-    const match = cityStateZip.match(/^(.+?),?\s+([A-Z]{2})\s+(\d{5}(-\d{4})?)/);
-    const buyerCity = match?.[1] || '';
-    const buyerState = match?.[2] || '';
-    const buyerZip = match?.[3] || '';
-    const buyerCountry = addressParts[2] || 'United States';
+    // Pattern 1: Try to find "City, State ZIP" or "City State ZIP" pattern anywhere in the text
+    const cityStateZipPattern = /([A-Za-z\s]+?),?\s*([A-Z]{2})\s+(\d{5}(-\d{4})?)/;
+    const cityStateZipMatch = normalizedText.match(cityStateZipPattern);
     
+    if (cityStateZipMatch) {
+      buyerCity = cityStateZipMatch[1].trim();
+      buyerState = cityStateZipMatch[2];
+      buyerZip = cityStateZipMatch[3];
+      
+      // Everything before the city/state/zip is likely the street address
+      const beforeCityStateZip = normalizedText.substring(0, cityStateZipMatch.index || 0).trim();
+      
+      // Try to separate name from street address if name is in the text
+      if (buyerName && beforeCityStateZip.startsWith(buyerName)) {
+        buyerAddress = beforeCityStateZip.substring(buyerName.length).trim();
+      } else {
+        // Street address is typically the part with numbers (like "123 Main St")
+        const streetPattern = /\d+\s+[A-Za-z0-9\s,#.-]+/;
+        const streetMatch = beforeCityStateZip.match(streetPattern);
+        buyerAddress = streetMatch ? streetMatch[0].trim() : beforeCityStateZip;
+      }
+      
+      // Everything after the ZIP is likely country
+      const afterZip = normalizedText.substring((cityStateZipMatch.index || 0) + cityStateZipMatch[0].length).trim();
+      if (afterZip && afterZip.length > 2) {
+        // Check if it looks like a country name
+        const countryPatterns = ['United States', 'USA', 'US', 'Canada', 'UK', 'Australia', 'Germany', 'France'];
+        for (const country of countryPatterns) {
+          if (afterZip.toLowerCase().includes(country.toLowerCase())) {
+            buyerCountry = country === 'USA' || country === 'US' ? 'United States' : country;
+            break;
+          }
+        }
+        if (!countryPatterns.some(c => afterZip.toLowerCase().includes(c.toLowerCase()))) {
+          buyerCountry = afterZip.split(/[,\s]/)[0] || 'United States';
+        }
+      }
+    } else {
+      // Fallback: Try splitting by newlines if pattern didn't match
+      const addressParts = addressText.split(/[\n\r]+/).map(s => s.trim()).filter(Boolean);
+      if (addressParts.length >= 1) buyerAddress = addressParts[0] || '';
+      if (addressParts.length >= 2) {
+        const fallbackMatch = addressParts[1].match(/^(.+?),?\s+([A-Z]{2})\s+(\d{5}(-\d{4})?)/);
+        if (fallbackMatch) {
+          buyerCity = fallbackMatch[1] || '';
+          buyerState = fallbackMatch[2] || '';
+          buyerZip = fallbackMatch[3] || '';
+        }
+      }
+      if (addressParts.length >= 3) buyerCountry = addressParts[2] || 'United States';
+    }
+    
+    // Extract item details
     const itemTitle = document.querySelector('[data-testid="item-title"], .item-title, [class*="itemTitle"]')?.textContent?.trim() ||
                       document.querySelector('h1')?.textContent?.trim() || '';
     

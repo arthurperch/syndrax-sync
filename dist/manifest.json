@@ -52,7 +52,7 @@
     },
     {
       "js": [
-        "assets/ebay-order-extractor.ts-5b6dda91.js"
+        "assets/ebay-order-extractor.ts-87d4c536.js"
       ],
       "matches": [
         "*://*.ebay.com/ord/*",
@@ -106,7 +106,7 @@
     },
     {
       "js": [
-        "assets/aliexpress-fulfillment.ts-e8af6fd4.js"
+        "assets/aliexpress-fulfillment.ts-e7692e87.js"
       ],
       "matches": [
         "*://*.aliexpress.com/*"
@@ -127,7 +127,7 @@
     },
     {
       "js": [
-        "assets/ebay-listing-creator.ts-da16a0e4.js"
+        "assets/ebay-listing-creator.ts-64e7f279.js"
       ],
       "matches": [
         "*://*.ebay.com/sl/sell*",
@@ -146,7 +146,7 @@
     },
     {
       "js": [
-        "assets/finance-ebay-scanner.ts-10c83193.js"
+        "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "matches": [
         "*://*.ebay.com/mys/sold*",
@@ -156,7 +156,7 @@
     },
     {
       "js": [
-        "assets/finance-ebay-payment.ts-loader-d6ff7c38.js"
+        "assets/finance-ebay-payment.ts-loader-61513f80.js"
       ],
       "matches": [
         "*://*.ebay.com/mes/transactiondetails*",
@@ -168,7 +168,7 @@
     },
     {
       "js": [
-        "assets/finance-amazon-orders.ts-loader-7ebbe814.js"
+        "assets/finance-amazon-orders.ts-loader-f7505502.js"
       ],
       "matches": [
         "*://*.amazon.com/gp/your-account/order-history*",
@@ -208,9 +208,9 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/ebay-order-extractor.ts-5b6dda91.js",
-        "assets/ebay-listing-creator.ts-da16a0e4.js",
-        "assets/finance-ebay-scanner.ts-10c83193.js"
+        "assets/ebay-order-extractor.ts-87d4c536.js",
+        "assets/ebay-listing-creator.ts-64e7f279.js",
+        "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "use_dynamic_url": false
     },
@@ -231,7 +231,7 @@
         "*://*.amazon.com/*"
       ],
       "resources": [
-        "assets/amazon-fulfillment.ts-212fd93e.js"
+        "assets/amazon-fulfillment.ts-2713a60b.js"
       ],
       "use_dynamic_url": false
     },
@@ -241,7 +241,7 @@
       ],
       "resources": [
         "assets/aliexpress-price-checker.ts-dbf94a29.js",
-        "assets/aliexpress-fulfillment.ts-e8af6fd4.js"
+        "assets/aliexpress-fulfillment.ts-e7692e87.js"
       ],
       "use_dynamic_url": false
     },
@@ -266,8 +266,8 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/moneyParser-1c6cf73f.js",
-        "assets/finance-ebay-payment.ts-81c39eae.js"
+        "assets/moneyParser-4edb8f1a.js",
+        "assets/finance-ebay-payment.ts-8df0979e.js"
       ],
       "use_dynamic_url": false
     },
@@ -278,8 +278,8 @@
         "*://*.amazon.com/*"
       ],
       "resources": [
-        "assets/moneyParser-1c6cf73f.js",
-        "assets/finance-amazon-orders.ts-6e1dc6cd.js"
+        "assets/moneyParser-4edb8f1a.js",
+        "assets/finance-amazon-orders.ts-4875d7db.js"
       ],
       "use_dynamic_url": false
     }

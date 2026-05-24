@@ -102,9 +102,11 @@ async function processEarningsBatch(): Promise<void> {
         active: false
       });
       
-      if (tab.id) {
+      if (tab && typeof tab.id === 'number') {
         activeTabs.set(tab.id, order.orderId);
         console.log(`🔗 Opened tab ${tab.id} for order ${order.orderId}`);
+      } else {
+        console.error(`❌ Failed to get valid tab ID for ${order.orderId}`);
       }
     } catch (error) {
       console.error(`❌ Error opening tab for ${order.orderId}:`, error);
@@ -211,7 +213,7 @@ async function buildDailySummary() {
   const result = await chrome.storage.local.get('syndrax_daily_stats');
   const stats = result.syndrax_daily_stats || {};
   return {
-    date: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+    date: new Date().toISOString().split('T')[0],
     totalScanned: stats.totalScanned || 0,
     priceUpdates: stats.priceUpdates || 0,
     outOfStock: stats.outOfStock || 0,
@@ -354,6 +356,29 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         return { success: true };
       }
       
+      // ===== FINANCE RECONCILIATION SCAN =====
+      if (msgType === 'START_FINANCE_SCAN') {
+        const { runId, startUrl } = message.payload as { runId: string; startUrl: string };
+        console.log(`💰 Starting Finance Scan: ${runId}`);
+        startFinanceScan(runId, startUrl);
+        return { success: true };
+      }
+      
+      if (msgType === 'PAUSE_FINANCE_SCAN') {
+        pauseFinanceScan();
+        return { success: true };
+      }
+      
+      if (msgType === 'RESUME_FINANCE_SCAN') {
+        resumeFinanceScan();
+        return { success: true };
+      }
+      
+      if (msgType === 'STOP_FINANCE_SCAN') {
+        stopFinanceScan();
+        return { success: true };
+      }
+      
       // ===== FINANCE EARNINGS BATCH SCAN =====
       if (msgType === 'START_EARNINGS_BATCH_SCAN') {
         const { orders, batchSize = 5 } = message.payload as { orders: any[]; batchSize?: number };
@@ -413,28 +438,6 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           }
         }
         
-        return { success: true };
-      }
-      
-      // Finance Reconciliation scan messages
-      if (msgType === 'START_FINANCE_SCAN') {
-        const { runId, startUrl } = message.payload as { runId: string; startUrl: string };
-        await startFinanceScan(runId, startUrl);
-        return { success: true };
-      }
-      
-      if (msgType === 'PAUSE_FINANCE_SCAN') {
-        pauseFinanceScan();
-        return { success: true };
-      }
-      
-      if (msgType === 'RESUME_FINANCE_SCAN') {
-        resumeFinanceScan();
-        return { success: true };
-      }
-      
-      if (msgType === 'STOP_FINANCE_SCAN') {
-        stopFinanceScan();
         return { success: true };
       }
       
@@ -838,7 +841,10 @@ function scrapeAmazonTab(tabId: number, item: AmazonCheckItem): Promise<AmazonSc
 
 // Process decision based on Amazon data
 function processDecision(item: AmazonCheckItem, amazonData: AmazonScrapeData | null): AmazonResult {
-  const MARKUP = 2; // 100% markup = 2x
+  // Markup settings: default 2.0 (2x), minimum 1.1 (10%)
+  const DEFAULT_MARKUP = 2.0;
+  const MIN_MARKUP = 1.1;
+  const MARKUP = Math.max(DEFAULT_MARKUP, MIN_MARKUP); // Enforce minimum
   const THRESHOLD = 5; // 5% change threshold
 
   console.log('[BG] processDecision for', item.asin, 'amazonData:', amazonData);
@@ -958,8 +964,22 @@ async function startFinanceScan(runId: string, startUrl: string): Promise<void> 
   
   console.log('💼 Opened eBay sold page, tab ID:', tab.id);
   
-  // Wait for page to load, then start extraction
-  // The content script will handle the extraction
+  // Set up listener for when the tab finishes loading
+  if (tab.id) {
+    const tabId = tab.id;
+    const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (updatedTabId === tabId && changeInfo.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        // Wait 1500ms for page to fully render, then send message to content script
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tabId, { type: 'FINANCE_PAGE_READY' }).catch((err) => {
+            console.error('💼 Failed to send FINANCE_PAGE_READY:', err);
+          });
+        }, 1500);
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+  }
 }
 
 async function handleFinanceScanPageReady(tabId: number): Promise<void> {
@@ -1106,3 +1126,151 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
   }
 });
+
+// ==================== RESEARCH PIPELINE ====================
+// TASK-010: Wire everything together
+
+import { searchAmazon, type AmazonProduct } from './services/research';
+import { checkCompliance, type ComplianceResult } from './services/compliance';
+import { createListing, type EbayListing } from './services/lister';
+
+// Research pipeline seed queries
+const RESEARCH_QUERIES = [
+  'phone case',
+  'laptop stand',
+  'cable organizer',
+  'desk lamp',
+  'phone holder'
+];
+
+// Track research pipeline state
+interface ResearchPipelineState {
+  isRunning: boolean;
+  currentQuery: string;
+  productsProcessed: number;
+  productsApproved: number;
+  productsFlagged: number;
+  startTime: number;
+}
+
+let researchPipelineState: ResearchPipelineState = {
+  isRunning: false,
+  currentQuery: '',
+  productsProcessed: 0,
+  productsApproved: 0,
+  productsFlagged: 0,
+  startTime: 0
+};
+
+/**
+ * Run the complete research pipeline for a given query
+ * 1. Search Amazon for products
+ * 2. Check compliance for each product
+ * 3. Create eBay listings for approved products
+ * 4. Report results to Discord
+ */
+async function runResearchPipeline(query: string): Promise<void> {
+  if (researchPipelineState.isRunning) {
+    console.log('[Research] Pipeline already running, skipping');
+    return;
+  }
+
+  researchPipelineState.isRunning = true;
+  researchPipelineState.currentQuery = query;
+  researchPipelineState.productsProcessed = 0;
+  researchPipelineState.productsApproved = 0;
+  researchPipelineState.productsFlagged = 0;
+  researchPipelineState.startTime = Date.now();
+
+  console.log(`[Research] Starting pipeline for query: "${query}"`);
+
+  try {
+    // Step 1: Search Amazon
+    console.log(`[Research] Searching Amazon for: "${query}"`);
+    const products = await searchAmazon(query);
+    console.log(`[Research] Found ${products.length} products`);
+
+    if (products.length === 0) {
+      console.log(`[Research] No products found for query: "${query}"`);
+      await discord.reportResearchResult(
+        { title: `No results for "${query}"`, asin: 'N/A', price: 0, rating: 0, reviewCount: 0, imageUrl: '', productUrl: '' },
+        null,
+        { passed: false, reasons: ['No products found'], riskLevel: 'MEDIUM', filtersFailed: [] }
+      );
+      return;
+    }
+
+    // Step 2-4: Process each product
+    for (const product of products) {
+      researchPipelineState.productsProcessed++;
+
+      try {
+        // Check compliance
+        const compliance = checkCompliance(product);
+        console.log(`[Research] Product: ${product.title.substring(0, 50)}`);
+        console.log(`[Research] Compliance: ${compliance.passed ? 'PASSED' : 'FAILED'}`);
+
+        let listing: EbayListing | null = null;
+
+        // If passed compliance, create listing
+        if (compliance.passed) {
+          listing = await createListing(product);
+          researchPipelineState.productsApproved++;
+          console.log(`[Research] Listing created: $${listing.price.toFixed(2)} (${listing.margin.toFixed(1)}% margin)`);
+        } else {
+          researchPipelineState.productsFlagged++;
+          console.log(`[Research] Product flagged: ${compliance.reasons.join(', ')}`);
+        }
+
+        // Report to Discord
+        await discord.reportResearchResult(product, listing, compliance);
+
+        // Small delay between products
+        await new Promise(r => setTimeout(r, 500));
+      } catch (err) {
+        console.error(`[Research] Error processing product:`, err);
+        await storage.addActivity(`Research error: ${String(err).substring(0, 100)}`, 'error');
+      }
+    }
+
+    // Pipeline complete
+    const duration = Math.round((Date.now() - researchPipelineState.startTime) / 1000 / 60);
+    console.log(`[Research] Pipeline complete for "${query}"`);
+    console.log(`[Research] Processed: ${researchPipelineState.productsProcessed}, Approved: ${researchPipelineState.productsApproved}, Flagged: ${researchPipelineState.productsFlagged}`);
+    console.log(`[Research] Duration: ${duration} minutes`);
+
+    await storage.addActivity(
+      `Research pipeline complete: ${researchPipelineState.productsApproved} approved, ${researchPipelineState.productsFlagged} flagged`,
+      'success'
+    );
+  } catch (err) {
+    console.error('[Research] Pipeline error:', err);
+    await storage.addActivity(`Research pipeline error: ${String(err).substring(0, 100)}`, 'error');
+  } finally {
+    researchPipelineState.isRunning = false;
+  }
+}
+
+/**
+ * Start the research pipeline scheduler
+ * Runs every 4 hours with the seed query list
+ */
+function startResearchScheduler(): void {
+  console.log('[Research] Starting research scheduler (every 4 hours)');
+
+  // Run immediately on startup
+  const runNextQuery = async () => {
+    const query = RESEARCH_QUERIES[Math.floor(Math.random() * RESEARCH_QUERIES.length)];
+    console.log(`[Research] Running scheduled pipeline for: "${query}"`);
+    await runResearchPipeline(query);
+  };
+
+  // Run first query after 1 minute
+  setTimeout(runNextQuery, 60000);
+
+  // Then run every 4 hours (14400000 ms)
+  setInterval(runNextQuery, 4 * 60 * 60 * 1000);
+}
+
+// Start research scheduler on extension load
+startResearchScheduler();

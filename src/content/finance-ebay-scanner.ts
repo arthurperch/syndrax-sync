@@ -572,6 +572,16 @@ async function viewInventory(): Promise<void> {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   console.log('📨 Finance scanner received message:', msg.type);
   
+  if (msg.type === 'FINANCE_PAGE_READY') {
+    console.log('💼 Received FINANCE_PAGE_READY - starting scan');
+    // Trigger the scan automatically
+    setTimeout(() => {
+      startBatchScan();
+    }, 500);
+    sendResponse({ success: true });
+    return true;
+  }
+  
   if (msg.type === 'EXTRACT_EBAY_SOLD_LIST') {
     try {
       const orders = extractSoldOrdersFromPage();

@@ -1,6 +1,23 @@
 import { useState, useEffect } from 'react';
 import { storage, type ActivityItem, type Order, type InventoryItem } from '../services/storage';
-import type { SyncSession, SyncAction } from '../services/sync-engine';
+
+// Types from sync-controller (no longer using sync-engine.ts)
+type SyncAction = 'NO_CHANGE' | 'PRICE_INCREASED' | 'PRICE_DECREASED' | 'OUT_OF_STOCK' | 'BACK_IN_STOCK' | 'WRONG_ITEM' | 'SOURCE_NOT_FOUND' | 'ERROR';
+
+interface SyncSession {
+  id: string;
+  startedAt: string;
+  completedAt: string;
+  stats: {
+    checked: number;
+    priceUpdates: number;
+    outOfStock: number;
+    backInStock: number;
+    flagged: number;
+    errors: number;
+    noChange: number;
+  };
+}
 
 interface SyncProgress {
   checked: number;
@@ -241,24 +258,24 @@ export default function Dashboard() {
               Last Sync: {formatTimeAgo(lastSession.completedAt)}
             </span>
             <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-              {lastSession.checked} items checked
+              {lastSession.stats.checked} items checked
             </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             <div className="sync-stat sync-stat-success">
-              <div className="sync-stat-num">{lastSession.noChange}</div>
+              <div className="sync-stat-num">{lastSession.stats.noChange}</div>
               <div className="sync-stat-label">OK</div>
             </div>
             <div className="sync-stat sync-stat-warning">
-              <div className="sync-stat-num">{lastSession.priceUpdated}</div>
+              <div className="sync-stat-num">{lastSession.stats.priceUpdates}</div>
               <div className="sync-stat-label">Updated</div>
             </div>
             <div className="sync-stat sync-stat-error">
-              <div className="sync-stat-num">{lastSession.outOfStock}</div>
+              <div className="sync-stat-num">{lastSession.stats.outOfStock}</div>
               <div className="sync-stat-label">OOS</div>
             </div>
             <div className="sync-stat sync-stat-orange">
-              <div className="sync-stat-num">{lastSession.flagged + lastSession.errors}</div>
+              <div className="sync-stat-num">{lastSession.stats.flagged + lastSession.stats.errors}</div>
               <div className="sync-stat-label">Issues</div>
             </div>
           </div>

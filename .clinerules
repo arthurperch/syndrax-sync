@@ -1,0 +1,30 @@
+## Session Rules
+
+### Git — Mandatory Last Step
+After every successful build (zero TypeScript errors):
+1. git add -A
+2. git commit -m "Session [X] — [Feature Name] complete"
+3. git push origin master
+4. Session is NOT complete until git push confirms success
+
+### Zip Archive — Mandatory Last Step
+After git push confirms:
+1. Run: powershell Compress-Archive -Path C:\hermes-workspace\syndrax-sync\* -DestinationPath C:\hermes-workspace\syndrax-sync-latest.zip -Force
+2. Confirm zip created at C:\hermes-workspace\syndrax-sync-latest.zip
+3. Session is NOT complete until zip is updated
+
+### Context Efficiency
+- Read files in sections using line ranges, not entire files
+- Max 300 lines per file read
+- Do not re-read files already in context this session
+- Stop immediately after build passes and git push confirms
+
+### Scope
+- One feature per session only
+- Do not touch files outside the stated scope
+- Do not start the next feature if the current one is incomplete
+
+### Build
+- Run bun run build before marking done
+- Zero TypeScript errors required
+- If errors exist, fix them before git push
