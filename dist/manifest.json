@@ -18,7 +18,19 @@
   ],
   "action": {
     "default_popup": "index.html",
-    "default_title": "Syndrax Sync"
+    "default_title": "Syndrax Sync",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "background": {
     "service_worker": "service-worker-loader.js",
@@ -124,7 +136,7 @@
     },
     {
       "js": [
-        "assets/finance-ebay-payment.ts-loader-d6ff7c38.js"
+        "assets/finance-ebay-payment.ts-loader-61513f80.js"
       ],
       "matches": [
         "*://*.ebay.com/mes/transactiondetails*",
@@ -136,7 +148,7 @@
     },
     {
       "js": [
-        "assets/finance-amazon-orders.ts-loader-7ebbe814.js"
+        "assets/finance-amazon-orders.ts-loader-f7505502.js"
       ],
       "matches": [
         "*://*.amazon.com/gp/your-account/order-history*",
@@ -149,11 +161,11 @@
   "web_accessible_resources": [
     {
       "matches": [
-        "*://*.amazon.com/*",
-        "*://*.ebay.com/*"
+        "<all_urls>"
       ],
       "resources": [
-        "button1.mp3"
+        "button1.mp3",
+        "dashboard.html"
       ],
       "use_dynamic_url": false
     },
@@ -229,8 +241,8 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/moneyParser-1c6cf73f.js",
-        "assets/finance-ebay-payment.ts-81c39eae.js"
+        "assets/moneyParser-4edb8f1a.js",
+        "assets/finance-ebay-payment.ts-8df0979e.js"
       ],
       "use_dynamic_url": false
     },
@@ -241,8 +253,8 @@
         "*://*.amazon.com/*"
       ],
       "resources": [
-        "assets/moneyParser-1c6cf73f.js",
-        "assets/finance-amazon-orders.ts-6e1dc6cd.js"
+        "assets/moneyParser-4edb8f1a.js",
+        "assets/finance-amazon-orders.ts-4875d7db.js"
       ],
       "use_dynamic_url": false
     }

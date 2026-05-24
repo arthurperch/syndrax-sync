@@ -120,3 +120,133 @@ _Managed by Hermes Agent. Do not edit manually._
 **Files:** src/background-service.ts
 **Expected Output:** Full automated pipeline running every 4 hours. Commit [HERMES-TASK-010] and push.
 **Results:** Implemented runResearchPipeline() with full workflow, startResearchScheduler() running every 4 hours with seed queries, state tracking, and Discord reporting.
+
+---
+
+## TASK-011
+**Status:** TODO
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Fix the condition in scanCompetitorListings() to correctly exclude 'Shop on eBay' listings.
+**Files:** src/content/competitor-research.ts
+**Expected Output:** Verify that 'Shop on eBay' listings are no longer included in the competitor list. Run npm run build and check for any errors.
+**Results:**
+
+
+---
+
+## TASK-012
+**Status:** TODO
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Initialize the orderCards variable before using it in extractSoldOrdersFromPage() to avoid runtime errors.
+**Files:** src/content/finance-ebay-scanner.ts
+**Expected Output:** Run npm run build and ensure there are no errors related to undefined variables.
+**Results:**
+
+
+---
+
+## TASK-013
+**Status:** TODO
+**Priority:** MEDIUM
+**Assigned:** Cline
+**Type:** FEATURE_ENHANCEMENT
+**Description:** Refactor the data extraction logic into smaller, reusable functions to improve maintainability.
+**Files:** src/content/competitor-research.ts, src/content/finance-ebay-scanner.ts
+**Expected Output:** Verify that all data extraction logic is encapsulated in smaller functions and that functionality remains unchanged. Run npm run build.
+**Results:**
+
+
+---
+
+## TASK-014
+**Status:** TODO
+**Priority:** MEDIUM
+**Assigned:** Cline
+**Type:** TESTING_TASK
+**Description:** Implement unit tests for individual components to ensure they function as expected.
+**Files:** src/content/competitor-research.ts, src/content/finance-ebay-scanner.ts
+**Expected Output:** Run the test suite and ensure all tests pass. Coverage should be above 80%. Run npm run build.
+**Results:**
+
+
+---
+
+## TASK-015
+**Status:** TODO
+**Priority:** LOW
+**Assigned:** Cline
+**Type:** IMPROVEMENT_TASK
+**Description:** Enhance error handling and logging throughout the codebase for better visibility during runtime issues.
+**Files:** src/content/competitor-research.ts, src/content/finance-ebay-scanner.ts, other relevant files
+**Expected Output:** Run npm run build and check the logs to ensure that errors are being logged appropriately.
+**Results:**
+
+
+---
+
+## TASK-016
+**Status:** TODO
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Ensure all async functions are properly awaited when calling them from other parts of the codebase. For example, in src/services/discord-logger.ts, ensure that `sendDailySummaryWebhook` awaits the result of `buildDailySummary()`.
+**Files:** src/services/discord-logger.ts
+**Expected Output:** All async functions are properly awaited and the build passes.
+**Results:**
+
+
+---
+
+## TASK-017
+**Status:** TODO
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Implement perceptual hashing for image comparison as suggested in src/services/fingerprint.ts. Update `checkFingerprint` to use perceptual hashing instead of MD5 hash.
+**Files:** src/services/fingerprint.ts
+**Expected Output:** Image comparison using perceptual hashing is implemented and the build passes.
+**Results:**
+
+
+---
+
+## TASK-018
+**Status:** TODO
+**Priority:** HIGH
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Add a retry mechanism to all failed API calls in src/services/ai.ts, src/services/storage.ts, and src/services/sync-engine.ts. Use the `retryFetch` function from src/services/retry.ts for this purpose.
+**Files:** ['src/services/ai.ts', 'src/services/storage.ts', 'src/services/sync-engine.ts']
+**Expected Output:** All API calls have retry logic and the build passes.
+**Results:**
+
+
+---
+
+## TASK-019
+**Status:** TODO
+**Priority:** MEDIUM
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Handle failed price or stock checks in src/services/sync-engine.ts. Ensure that any failures during price or stock checks do not cause the sync process to fail silently.
+**Files:** src/services/sync-engine.ts
+**Expected Output:** Failed price or stock checks are handled and do not cause silent failure, and the build passes.
+**Results:**
+
+
+---
+
+## TASK-020
+**Status:** TODO
+**Priority:** MEDIUM
+**Assigned:** Cline
+**Type:** BUG_FIX
+**Description:** Ensure that the `handleCopyLog` function in src/components/DebugConsole.ts clears the log messages state on new messages to prevent unbounded memory growth.
+**Files:** src/components/DebugConsole.ts
+**Expected Output:** The `handleCopyLog` function clears the log messages state on new messages and the build passes.
+**Results:**
+

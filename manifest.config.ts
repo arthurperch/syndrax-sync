@@ -21,9 +21,22 @@ export default defineManifest({
     'https://discord.com/*'
   ],
   
-  action: {
+action: {
     default_popup: 'index.html',
-    default_title: 'Syndrax Sync'
+    default_title: 'Syndrax Sync',
+    default_icon: {
+      '16': 'icons/icon16.png',
+      '32': 'icons/icon32.png',
+      '48': 'icons/icon48.png',
+      '128': 'icons/icon128.png'
+    }
+  },
+
+  icons: {
+    '16': 'icons/icon16.png',
+    '32': 'icons/icon32.png',
+    '48': 'icons/icon48.png',
+    '128': 'icons/icon128.png'
   },
   
   background: {
@@ -105,8 +118,8 @@ export default defineManifest({
   
   web_accessible_resources: [
     {
-      resources: ['button1.mp3'],
-      matches: ['*://*.amazon.com/*', '*://*.ebay.com/*']
+      resources: ['button1.mp3', 'dashboard.html'],
+      matches: ['<all_urls>'],
     }
   ]
 });
