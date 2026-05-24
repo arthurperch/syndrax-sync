@@ -750,13 +750,41 @@ Rules:
         }
       }
 
-      // ===== BULK LISTER — CREATE_EBAY_LISTING (stub — full API in Session J) =====
+      // ===== BULK LISTER — CREATE_EBAY_LISTING (Session J — full implementation) =====
       if (msgType === 'CREATE_EBAY_LISTING') {
         try {
-          const { asin, ebayPrice, title } = message.payload as { asin: string; ebayPrice: number; title: string };
-          console.log(`[BulkLister] CREATE_EBAY_LISTING stub — ASIN: ${asin}, Price: $${ebayPrice.toFixed(2)}, Title: ${title.substring(0, 50)}`);
-          // Full eBay API integration is Session J
-          return { success: true };
+          const payload = message.payload as {
+            asin: string;
+            ebayPrice: number;
+            title: string;
+            description?: string;
+            condition?: string;
+            quantity?: number;
+            categoryId?: string;
+            images?: string[];
+          };
+          const { asin, ebayPrice, title, description, condition, quantity, categoryId, images } = payload;
+
+          // Build ListingData matching ebay-listing-creator.ts interface
+          const listingData = {
+            title,
+            description: description ?? `${title}\n\nASIN: ${asin}`,
+            price: ebayPrice,
+            condition: condition ?? 'New',
+            quantity: quantity ?? 1,
+            categoryId: categoryId ?? '',
+            images: images ?? [],
+            keywords: [asin],
+          };
+
+          // Store for ebay-listing-creator.ts content script to pick up
+          await chrome.storage.local.set({ pendingListing: listingData });
+
+          // Open eBay sell page — content script will auto-fill
+          await chrome.tabs.create({ url: 'https://www.ebay.com/sell', active: true });
+
+          console.log(`[BulkLister] CREATE_EBAY_LISTING — ASIN: ${asin}, Price: $${ebayPrice.toFixed(2)}, Title: ${title.substring(0, 50)}, Condition: ${condition ?? 'New'}, Qty: ${quantity ?? 1}`);
+          return { success: true, message: 'Opening eBay sell page...' };
         } catch (e) {
           return { success: false, error: String(e) };
         }
@@ -954,6 +982,74 @@ Rules:
         try {
           const rules = message.payload as Record<string, unknown>;
           await chrome.storage.local.set({ agent_rules: rules });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      // ===== SESSION J — AMAZON ORDER INITIATION =====
+
+      if (msgType === 'INITIATE_AMAZON_ORDER') {
+        try {
+          const payload = message.payload as {
+            orderId: string;
+            buyerName?: string;
+            shippingAddress?: Record<string, unknown>;
+            itemTitle: string;
+            asin: string;
+            ebayPrice: number;
+            amazonUrl: string;
+            shipping?: Record<string, unknown>;
+          };
+          const { orderId, itemTitle, asin, ebayPrice, amazonUrl, shipping } = payload;
+
+          if (!amazonUrl) {
+            return { ok: false, error: 'amazonUrl is required' };
+          }
+          if (!orderId) {
+            return { ok: false, error: 'orderId is required' };
+          }
+
+          const pendingOrder = {
+            shipping: shipping ?? {},
+            itemTitle: itemTitle ?? '',
+            quantity: 1,
+            amazonUrl,
+            itemId: asin ?? '',
+            ebayOrderId: orderId,
+            ebayEarnings: ebayPrice ?? 0,
+            timestamp: Date.now(),
+          };
+
+          await chrome.storage.local.set({
+            pendingAmazonOrder: pendingOrder,
+            autoOrderInProgress: true,
+          });
+
+          await chrome.tabs.create({ url: amazonUrl, active: true });
+
+          console.log(`[Session J] INITIATE_AMAZON_ORDER — Order: ${orderId}, ASIN: ${asin}, URL: ${amazonUrl}`);
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      // ===== SESSION J — COMPLETED ORDERS TRACKING =====
+
+      if (msgType === 'GET_COMPLETED_ORDERS') {
+        try {
+          const r = await chrome.storage.local.get('completed_amazon_orders');
+          return { ok: true, orders: Array.isArray(r.completed_amazon_orders) ? r.completed_amazon_orders : [] };
+        } catch (e) {
+          return { ok: false, orders: [], error: String(e) };
+        }
+      }
+
+      if (msgType === 'CLEAR_COMPLETED_ORDERS') {
+        try {
+          await chrome.storage.local.remove('completed_amazon_orders');
           return { ok: true };
         } catch (e) {
           return { ok: false, error: String(e) };

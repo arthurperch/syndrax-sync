@@ -885,7 +885,36 @@ async function runAutomation(shipping: ShippingData, startFromStep = 1): Promise
     // ========== STOP HERE - DO NOT PROCEED TO CHECKOUT ==========
     await clearAutomationState(true); // Full clear - form is filled, job done
     showFilledSummary(shipping, filledValues);
-    
+
+    // ── SUCCESS ONLY: store completion + fire SET_ORDER_SOURCE ──
+    try {
+        const stored = await new Promise<Record<string, unknown>>(resolve =>
+            chrome.storage.local.get(['pendingAmazonOrder', 'completed_amazon_orders'], resolve)
+        );
+        const order = stored.pendingAmazonOrder as PendingAmazonOrder | undefined;
+        if (order) {
+            const completed: unknown[] = Array.isArray(stored.completed_amazon_orders)
+                ? stored.completed_amazon_orders : [];
+            completed.push({
+                ebayOrderId: order.ebayOrderId,
+                asin: order.itemId,
+                amazonOrderId: null,
+                completedAt: Date.now(),
+                amazonCost: currentProfitData.amazonCost
+            });
+            await new Promise<void>(resolve =>
+                chrome.storage.local.set({ completed_amazon_orders: completed }, resolve)
+            );
+            chrome.runtime.sendMessage({
+                type: 'SET_ORDER_SOURCE',
+                payload: { orderId: order.ebayOrderId, source: 'amazon' }
+            });
+            console.log('✅ Order completion stored for eBay order:', order.ebayOrderId);
+        }
+    } catch (e) {
+        console.warn('⚠️ Could not store completion data:', e);
+    }
+
     console.log('🛑 AUTOMATION STOPPED - User must manually review and click Continue');
 }
 

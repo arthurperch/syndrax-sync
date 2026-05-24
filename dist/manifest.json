@@ -85,7 +85,7 @@
     },
     {
       "js": [
-        "assets/amazon-fulfillment.ts-loader-a53d1f03.js"
+        "assets/amazon-fulfillment.ts-loader-bd64dfee.js"
       ],
       "matches": [
         "*://*.amazon.com/*"
@@ -124,7 +124,7 @@
     },
     {
       "js": [
-        "assets/ebay-listing-creator.ts-da16a0e4.js"
+        "assets/ebay-listing-creator.ts-64e7f279.js"
       ],
       "matches": [
         "*://*.ebay.com/sl/sell*",
@@ -205,7 +205,7 @@
       ],
       "resources": [
         "assets/ebay-order-extractor.ts-87d4c536.js",
-        "assets/ebay-listing-creator.ts-da16a0e4.js",
+        "assets/ebay-listing-creator.ts-64e7f279.js",
         "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "use_dynamic_url": false
@@ -227,7 +227,7 @@
         "*://*.amazon.com/*"
       ],
       "resources": [
-        "assets/amazon-fulfillment.ts-212fd93e.js"
+        "assets/amazon-fulfillment.ts-2713a60b.js"
       ],
       "use_dynamic_url": false
     },

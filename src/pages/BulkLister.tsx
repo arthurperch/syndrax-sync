@@ -347,7 +347,15 @@ export default function BulkLister() {
       return false;
     }
 
-    const result = await sendMsg<ListResult>('CREATE_EBAY_LISTING', { asin, ebayPrice, title });
+    const queuedItem = queue.find(i => i.asin === asin);
+    const result = await sendMsg<ListResult>('CREATE_EBAY_LISTING', {
+      asin,
+      ebayPrice,
+      title,
+      description: queuedItem?.description,
+      condition: 'New',
+      quantity: 1,
+    });
 
     if (result?.success) {
       const newCount = currentCount + 1;
