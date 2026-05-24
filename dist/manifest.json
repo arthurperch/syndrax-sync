@@ -59,11 +59,26 @@
     {
       "js": [
         "assets/amazon-price-checker.ts-09266909.js",
-        "assets/amazon-scraper.ts-cb9e63c1.js"
+        "assets/amazon-scraper.ts-cb9e63c1.js",
+        "assets/sniper-overlay.ts-b8f749fc.js"
       ],
       "matches": [
         "*://*.amazon.com/dp/*",
         "*://*.amazon.com/gp/product/*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/sniper-overlay.ts-b8f749fc.js"
+      ],
+      "matches": [
+        "https://www.amazon.co.uk/dp/*",
+        "https://www.amazon.co.uk/gp/product/*",
+        "https://www.amazon.de/dp/*",
+        "https://www.amazon.de/gp/product/*",
+        "https://www.amazon.ca/dp/*",
+        "https://www.amazon.ca/gp/product/*"
       ],
       "run_at": "document_end"
     },
@@ -198,7 +213,8 @@
       ],
       "resources": [
         "assets/amazon-price-checker.ts-09266909.js",
-        "assets/amazon-scraper.ts-cb9e63c1.js"
+        "assets/amazon-scraper.ts-cb9e63c1.js",
+        "assets/sniper-overlay.ts-b8f749fc.js"
       ],
       "use_dynamic_url": false
     },

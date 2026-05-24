@@ -58,7 +58,19 @@ action: {
     },
     {
       matches: ['*://*.amazon.com/dp/*', '*://*.amazon.com/gp/product/*'],
-      js: ['src/content/amazon-price-checker.ts', 'src/content/amazon-scraper.ts'],
+      js: ['src/content/amazon-price-checker.ts', 'src/content/amazon-scraper.ts', 'src/content/sniper-overlay.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: [
+        'https://www.amazon.co.uk/dp/*',
+        'https://www.amazon.co.uk/gp/product/*',
+        'https://www.amazon.de/dp/*',
+        'https://www.amazon.de/gp/product/*',
+        'https://www.amazon.ca/dp/*',
+        'https://www.amazon.ca/gp/product/*'
+      ],
+      js: ['src/content/sniper-overlay.ts'],
       run_at: 'document_end'
     },
     {

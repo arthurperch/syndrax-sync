@@ -1,6 +1,7 @@
 import { storage, type InventoryItem } from './services/storage';
 import type { Message } from './services/messaging';
 import { discord, sendDailySummaryWebhook } from './services/discord-logger';
+import { VERO_BRANDS } from './services/compliance';
 
 // Helper to get next midnight timestamp
 function getNextMidnight(): number {
@@ -445,7 +446,100 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         console.log('💼 Finance scanner ready on:', message.payload);
         return { success: true };
       }
-      
+
+      // ===== SNIPER OVERLAY =====
+      if (msgType === 'SNIPER_LIST_ITEM') {
+        try {
+          await chrome.storage.local.set({ pendingListing: (message.payload as any) });
+          await chrome.tabs.create({ url: 'https://www.ebay.com/sell', active: true });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'SNIPER_COMPLIANCE_CHECK') {
+        try {
+          const { title, brand } = message.payload as { title: string; brand: string };
+          const titleLower = (title + ' ' + brand).toLowerCase();
+
+          // Check VERO_BRANDS (case-insensitive)
+          const matchedVero = VERO_BRANDS.find(b =>
+            typeof b === 'string' && b.length > 2 && titleLower.includes(b.toLowerCase())
+          );
+
+          if (matchedVero) {
+            return { status: 'blocked', brand: matchedVero, message: `VERO brand detected: ${matchedVero}` };
+          }
+
+          // Soft warning: brand field contains a known brand name
+          const brandLower = brand.toLowerCase();
+          const knownBrands = ['apple', 'samsung', 'sony', 'nike', 'adidas', 'lego', 'disney', 'microsoft', 'google', 'amazon'];
+          const softMatch = knownBrands.find(b => brandLower.includes(b));
+          if (softMatch) {
+            return { status: 'warning', brand: softMatch, message: `Possible protected brand: ${softMatch}` };
+          }
+
+          return { status: 'clear', brand: '', message: 'No VERO violations detected' };
+        } catch (e) {
+          return { status: 'clear', brand: '', message: 'Check failed' };
+        }
+      }
+
+      if (msgType === 'SNIPER_GENERATE_TITLE') {
+        try {
+          const { prompt, preferCloud } = message.payload as { prompt: string; preferCloud?: boolean };
+
+          // Try Ollama first (unless cloud preferred)
+          if (!preferCloud) {
+            try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 5000);
+              const ollamaRes = await fetch('http://localhost:11434/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: 'qwen2.5-coder:7b', prompt, stream: false }),
+                signal: controller.signal
+              });
+              clearTimeout(timeout);
+              if (ollamaRes.ok) {
+                const data = await ollamaRes.json();
+                const title = (data.response || '').trim().replace(/^["']|["']$/g, '').slice(0, 80);
+                if (title) return { title, model: 'LOCAL' };
+              }
+            } catch {
+              // Ollama failed, fall through to Claude
+            }
+          }
+
+          // Fall back to Claude API
+          const apiKeyResult = await chrome.storage.local.get('syndrax_api_key');
+          const apiKey: string = apiKeyResult.syndrax_api_key || '';
+          if (!apiKey) {
+            return { title: '', model: 'ERROR', error: 'No API key configured' };
+          }
+
+          const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 100,
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+          const claudeData = await claudeRes.json();
+          const title = (claudeData.content?.[0]?.text || '').trim().replace(/^["']|["']$/g, '').slice(0, 80);
+          return { title, model: 'CLOUD' };
+        } catch (e) {
+          return { title: '', model: 'ERROR', error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }

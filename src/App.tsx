@@ -779,6 +779,57 @@ function PipelineRow({ item, index, onClick }: {
   );
 }
 
+// ─── Sniper Card ──────────────────────────────────────────────────────────────
+
+function SniperCard() {
+  const [enabled, setEnabled] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.get("sniper_enabled", (r) => {
+        setEnabled(r.sniper_enabled !== false);
+      });
+    }
+  }, []);
+
+  const toggle = useCallback(() => {
+    const next = !enabled;
+    setEnabled(next);
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.local.set({ sniper_enabled: next });
+    }
+  }, [enabled]);
+
+  return (
+    <motion.div
+      custom={11} variants={rowVariants} initial="hidden" animate="show"
+      className="relative w-full overflow-hidden rounded-[16px] border border-cyan-400/20 bg-cyan-400/[0.04] p-3"
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 shadow-lg shadow-cyan-500/20">
+          <span className="text-lg">⚡</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[13px] font-semibold tracking-wide text-slate-100">Sniper</h2>
+            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${enabled ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" : "bg-slate-600"}`} />
+          </div>
+          <p className="mt-0.5 text-[10px] text-slate-500">Amazon → eBay fast-list overlay</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={toggle}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enabled ? "bg-cyan-500" : "bg-slate-700"}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-1"}`} />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -891,6 +942,7 @@ export default function App() {
                   {pipeline.map((item, index) => (
                     <PipelineRow key={item.key} item={item} index={index} onClick={() => setView(item.key)} />
                   ))}
+                  <SniperCard />
                 </div>
                 <div className="h-8" />
               </motion.div>
