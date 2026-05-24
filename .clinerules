@@ -1,16 +1,21 @@
+## WORKING DIRECTORY
+All work happens in: C:\Users\olegp\OneDrive\Apps\syndrax-sync
+NEVER cd to Desktop, C:\hermes-workspace, or any other directory.
+If you find yourself outside this directory, cd back immediately.
+
 ## Session Rules
 
 ### Git — Mandatory Last Step
 After every successful build (zero TypeScript errors):
 1. git add -A
-2. git commit -m "Session [X] — [Feature Name] complete"
+2. git commit -m "Session [X]: [Feature Name]"
 3. git push origin master
 4. Session is NOT complete until git push confirms success
 
 ### Zip Archive — Mandatory Last Step
 After git push confirms:
-1. Run: powershell Compress-Archive -Path C:\hermes-workspace\syndrax-sync\* -DestinationPath C:\hermes-workspace\syndrax-sync-latest.zip -Force
-2. Confirm zip created at C:\hermes-workspace\syndrax-sync-latest.zip
+1. Run: powershell Compress-Archive -Path "C:\Users\olegp\OneDrive\Apps\syndrax-sync\*" -DestinationPath "C:\Users\olegp\OneDrive\Apps\syndrax-sync-latest.zip" -Force
+2. Confirm zip created
 3. Session is NOT complete until zip is updated
 
 ### Context Efficiency
