@@ -39,7 +39,8 @@
   "content_scripts": [
     {
       "js": [
-        "assets/ebay-mesh-order-overlay.ts-loader-a3371eb2.js"
+        "assets/ebay-mesh-order-overlay.ts-loader-a3371eb2.js",
+        "assets/customer-message-tool.ts-581ddf16.js"
       ],
       "matches": [
         "*://*.ebay.com/mesh/ord/details*"
@@ -192,6 +193,7 @@
       ],
       "resources": [
         "assets/ebay-mesh-order-overlay.ts-84ff6aac.js",
+        "assets/customer-message-tool.ts-581ddf16.js",
         "assets/competitor-research.ts-31764ce4.js"
       ],
       "use_dynamic_url": false

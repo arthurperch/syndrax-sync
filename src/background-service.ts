@@ -828,6 +828,67 @@ Rules:
         }
       }
 
+      // ===== SESSION H — CUSTOMER MESSAGE TOOL =====
+
+      if (msgType === 'SAVE_MESSAGE_TEMPLATE') {
+        try {
+          const { name, text, templateType } = message.payload as {
+            name: string;
+            text: string;
+            templateType: number;
+          };
+          const r = await chrome.storage.local.get('msg_saved_templates');
+          const templates: Array<{ name: string; text: string; templateType: number; savedAt: number }> =
+            r.msg_saved_templates || [];
+          // Max 10 — remove oldest if at limit
+          if (templates.length >= 10) {
+            templates.sort((a, b) => a.savedAt - b.savedAt);
+            templates.shift();
+          }
+          templates.push({ name, text, templateType, savedAt: Date.now() });
+          await chrome.storage.local.set({ msg_saved_templates: templates });
+          return { ok: true, count: templates.length };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'GET_MESSAGE_TEMPLATES') {
+        try {
+          const r = await chrome.storage.local.get('msg_saved_templates');
+          return { ok: true, templates: r.msg_saved_templates || [] };
+        } catch (e) {
+          return { ok: false, templates: [], error: String(e) };
+        }
+      }
+
+      if (msgType === 'SET_ORDER_SOURCE') {
+        try {
+          const { orderId, source } = message.payload as {
+            orderId: string;
+            source: 'amazon' | 'aliexpress';
+          };
+          await chrome.storage.local.set({ [`order_source_${orderId}`]: source });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'GET_ORDER_SOURCE') {
+        try {
+          const { orderId } = message.payload as { orderId: string };
+          const r = await chrome.storage.local.get(`order_source_${orderId}`);
+          const source = r[`order_source_${orderId}`];
+          return {
+            ok: true,
+            source: source === 'amazon' || source === 'aliexpress' ? source : 'unknown'
+          };
+        } catch (e) {
+          return { ok: true, source: 'unknown', error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }

@@ -45,10 +45,10 @@ action: {
   },
   
   content_scripts: [
-    // eBay Mesh Order Details - Auto Order overlay
+    // eBay Mesh Order Details - Auto Order overlay + Customer Message Tool
     {
       matches: ['*://*.ebay.com/mesh/ord/details*'],
-      js: ['src/content/ebay-mesh-order-overlay.ts'],
+      js: ['src/content/ebay-mesh-order-overlay.ts', 'src/content/customer-message-tool.ts'],
       run_at: 'document_end'
     },
     {

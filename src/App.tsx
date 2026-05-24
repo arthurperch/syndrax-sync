@@ -13,7 +13,7 @@ import {
   MoreVertical, Zap, RefreshCw, ExternalLink, ChevronLeft,
   ChevronRight, Play, Pause, Square, Download, Copy,
   CheckCircle, AlertTriangle, XCircle, Loader, Plus,
-  ArrowUpDown, Filter, Eye, PenTool,
+  ArrowUpDown, Filter, Eye, PenTool, MessageSquare,
 } from "lucide-react";
 import TitleBuilder from './pages/TitleBuilder';
 import DescriptionBuilder from './components/DescriptionBuilder';
@@ -126,6 +126,7 @@ const pipeline = [
   { id: "06.5", key: "description", title: "Description Builder", phase: "Phase 5B", icon: PenTool,    t: "violet" as Tone, desc: "HTML description templates • 5 styles • variable substitution" },
   { id: "07", key: "lister",       title: "Bulk Lister",       phase: "Phase 6",   icon: UploadCloud,  t: "pink"   as Tone, desc: "eBay listings in bulk • pricing • markup • margin calculations" },
   { id: "07.5", key: "optimizer",  title: "Listing Optimizer", phase: "Phase 6B",  icon: RefreshCw,    t: "cyan"   as Tone, desc: "90-day lifecycle · End & Sell Similar · price reduction · delete queue" },
+  { id: "08.5", key: "messages",   title: "Message Tool",      phase: "Phase 7B",  icon: MessageSquare, t: "blue"  as Tone, desc: "5 buyer templates · OOS · shipping · returns · one-click copy" },
   { id: "08", key: "dashboard",    title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
   { id: "09", key: "finance",      title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "10", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
@@ -954,6 +955,8 @@ export default function App() {
                           chrome.tabs.create({ url: chrome.runtime.getURL('bulklister.html') });
                         } else if (item.key === 'optimizer') {
                           chrome.tabs.create({ url: 'https://www.ebay.com/sh/lst/active' });
+                        } else if (item.key === 'messages') {
+                          chrome.tabs.create({ url: 'https://www.ebay.com/mys/sold' });
                         } else {
                           setView(item.key);
                         }
