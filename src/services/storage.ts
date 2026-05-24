@@ -83,6 +83,10 @@ export interface Settings {
   defaultSupplier: 'amazon' | 'aliexpress';
   dailySyncTime: string;
   debugMode: boolean;
+  vendor_aliexpress_enabled?: boolean;
+  vendor_walmart_enabled?: boolean;
+  vendor_homedepot_enabled?: boolean;
+  vendor_temu_enabled?: boolean;
 }
 
 export interface ActivityItem {
@@ -144,13 +148,17 @@ export const storage = {
     await this.set(KEYS.INVENTORY, items);
   },
 
-  async getSettings(): Promise<Settings> {
-    const defaults: Settings = {
-      markupPercent: 30,
-      priceChangeThreshold: 5,
+   async getSettings(): Promise<Settings> {
+     const defaults: Settings = {
+       markupPercent: 200, // Default 2.0x markup (100% profit)
+       priceChangeThreshold: 5,
       defaultSupplier: 'amazon',
       dailySyncTime: '06:00',
-      debugMode: false
+      debugMode: false,
+      vendor_aliexpress_enabled: true,
+      vendor_walmart_enabled: false,
+      vendor_homedepot_enabled: false,
+      vendor_temu_enabled: false
     };
     const stored = await this.get<Partial<Settings>>(KEYS.SETTINGS);
     return { ...defaults, ...stored };

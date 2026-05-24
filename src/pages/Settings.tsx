@@ -8,7 +8,11 @@ export default function Settings() {
     priceChangeThreshold: 5,
     defaultSupplier: 'amazon',
     dailySyncTime: '06:00',
-    debugMode: false
+    debugMode: false,
+    vendor_aliexpress_enabled: true,
+    vendor_walmart_enabled: false,
+    vendor_homedepot_enabled: false,
+    vendor_temu_enabled: false
   });
   const [apiKey, setApiKey] = useState('');
   const [saving, setSaving] = useState(false);
@@ -152,6 +156,180 @@ export default function Settings() {
           {testResult === 'error' && (
             <span className="badge badge-error" style={{ alignSelf: 'center' }}>✗ Invalid</span>
           )}
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 style={{ fontSize: 13, marginBottom: 12, color: 'var(--white)' }}>Advanced</h3>
+        <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>Enable or disable vendor integrations</p>
+
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          {/* AliExpress */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.05)'
+          }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--white)', fontWeight: 500 }}>AliExpress</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Source products from AliExpress</div>
+            </div>
+            <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={settings.vendor_aliexpress_enabled ?? true}
+                onChange={e => setSettings({ ...settings, vendor_aliexpress_enabled: e.target.checked })}
+                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+              />
+              <span style={{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: (settings.vendor_aliexpress_enabled ?? true) ? '#06b6d4' : '#334155',
+                borderRadius: 22,
+                transition: 'background 0.2s'
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  content: '',
+                  height: 16,
+                  width: 16,
+                  left: (settings.vendor_aliexpress_enabled ?? true) ? 21 : 3,
+                  bottom: 3,
+                  background: 'white',
+                  borderRadius: '50%',
+                  transition: 'left 0.2s'
+                }} />
+              </span>
+            </label>
+          </div>
+
+          {/* Walmart */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.05)'
+          }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--white)', fontWeight: 500 }}>Walmart</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Source products from Walmart</div>
+            </div>
+            <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={settings.vendor_walmart_enabled ?? false}
+                onChange={e => setSettings({ ...settings, vendor_walmart_enabled: e.target.checked })}
+                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+              />
+              <span style={{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: (settings.vendor_walmart_enabled ?? false) ? '#06b6d4' : '#334155',
+                borderRadius: 22,
+                transition: 'background 0.2s'
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  content: '',
+                  height: 16,
+                  width: 16,
+                  left: (settings.vendor_walmart_enabled ?? false) ? 21 : 3,
+                  bottom: 3,
+                  background: 'white',
+                  borderRadius: '50%',
+                  transition: 'left 0.2s'
+                }} />
+              </span>
+            </label>
+          </div>
+
+          {/* Home Depot */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.05)'
+          }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--white)', fontWeight: 500 }}>Home Depot</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Source products from Home Depot</div>
+            </div>
+            <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={settings.vendor_homedepot_enabled ?? false}
+                onChange={e => setSettings({ ...settings, vendor_homedepot_enabled: e.target.checked })}
+                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+              />
+              <span style={{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: (settings.vendor_homedepot_enabled ?? false) ? '#06b6d4' : '#334155',
+                borderRadius: 22,
+                transition: 'background 0.2s'
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  content: '',
+                  height: 16,
+                  width: 16,
+                  left: (settings.vendor_homedepot_enabled ?? false) ? 21 : 3,
+                  bottom: 3,
+                  background: 'white',
+                  borderRadius: '50%',
+                  transition: 'left 0.2s'
+                }} />
+              </span>
+            </label>
+          </div>
+
+          {/* Temu */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 0'
+          }}>
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--white)', fontWeight: 500 }}>Temu</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Source products from Temu</div>
+            </div>
+            <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, flexShrink: 0 }}>
+              <input
+                type="checkbox"
+                checked={settings.vendor_temu_enabled ?? false}
+                onChange={e => setSettings({ ...settings, vendor_temu_enabled: e.target.checked })}
+                style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+              />
+              <span style={{
+                position: 'absolute',
+                cursor: 'pointer',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: (settings.vendor_temu_enabled ?? false) ? '#06b6d4' : '#334155',
+                borderRadius: 22,
+                transition: 'background 0.2s'
+              }}>
+                <span style={{
+                  position: 'absolute',
+                  content: '',
+                  height: 16,
+                  width: 16,
+                  left: (settings.vendor_temu_enabled ?? false) ? 21 : 3,
+                  bottom: 3,
+                  background: 'white',
+                  borderRadius: '50%',
+                  transition: 'left 0.2s'
+                }} />
+              </span>
+            </label>
+          </div>
         </div>
       </div>
 

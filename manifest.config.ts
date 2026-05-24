@@ -18,12 +18,28 @@ export default defineManifest({
     '*://*.ebay.com/*',
     '*://*.amazon.com/*',
     '*://*.aliexpress.com/*',
-    'https://discord.com/*'
+    'https://discord.com/*',
+    '*://*.walmart.com/*',
+    '*://*.homedepot.com/*',
+    '*://*.temu.com/*'
   ],
   
-  action: {
+action: {
     default_popup: 'index.html',
-    default_title: 'Syndrax Sync'
+    default_title: 'Syndrax Sync',
+    default_icon: {
+      '16': 'icons/icon16.png',
+      '32': 'icons/icon32.png',
+      '48': 'icons/icon48.png',
+      '128': 'icons/icon128.png'
+    }
+  },
+
+  icons: {
+    '16': 'icons/icon16.png',
+    '32': 'icons/icon32.png',
+    '48': 'icons/icon48.png',
+    '128': 'icons/icon128.png'
   },
   
   background: {
@@ -32,10 +48,10 @@ export default defineManifest({
   },
   
   content_scripts: [
-    // eBay Mesh Order Details - Auto Order overlay
+    // eBay Mesh Order Details - Auto Order overlay + Customer Message Tool
     {
       matches: ['*://*.ebay.com/mesh/ord/details*'],
-      js: ['src/content/ebay-mesh-order-overlay.ts'],
+      js: ['src/content/ebay-mesh-order-overlay.ts', 'src/content/customer-message-tool.ts'],
       run_at: 'document_end'
     },
     {
@@ -45,7 +61,19 @@ export default defineManifest({
     },
     {
       matches: ['*://*.amazon.com/dp/*', '*://*.amazon.com/gp/product/*'],
-      js: ['src/content/amazon-price-checker.ts', 'src/content/amazon-scraper.ts'],
+      js: ['src/content/amazon-price-checker.ts', 'src/content/amazon-scraper.ts', 'src/content/sniper-overlay.ts'],
+      run_at: 'document_end'
+    },
+    {
+      matches: [
+        'https://www.amazon.co.uk/dp/*',
+        'https://www.amazon.co.uk/gp/product/*',
+        'https://www.amazon.de/dp/*',
+        'https://www.amazon.de/gp/product/*',
+        'https://www.amazon.ca/dp/*',
+        'https://www.amazon.ca/gp/product/*'
+      ],
+      js: ['src/content/sniper-overlay.ts'],
       run_at: 'document_end'
     },
     {
@@ -65,7 +93,7 @@ export default defineManifest({
     },
     {
       matches: ['*://*.ebay.com/sh/lst/*', '*://*.ebay.com/sh/lst*', '*://*.ebay.com/mys/active*'],
-      js: ['src/content/ebay-sync-controller.ts'],
+      js: ['src/content/ebay-sync-controller.ts', 'src/content/listing-optimizer.ts'],
       run_at: 'document_end'
     },
     {
@@ -105,8 +133,8 @@ export default defineManifest({
   
   web_accessible_resources: [
     {
-      resources: ['button1.mp3'],
-      matches: ['*://*.amazon.com/*', '*://*.ebay.com/*']
+      resources: ['button1.mp3', 'dashboard.html', 'bulklister.html'],
+      matches: ['<all_urls>'],
     }
   ]
 });
