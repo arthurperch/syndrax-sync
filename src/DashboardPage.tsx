@@ -684,6 +684,340 @@ function AddNodeModal({
   );
 }
 
+function EditNodeModal({ 
+  onClose, 
+  onSave, 
+  node 
+}: { 
+  onClose: () => void; 
+  onSave: (node: NodeConfig) => void;
+  node: NodeConfig;
+}) {
+  const [name, setName] = useState(node.name);
+  const [ip, setIp] = useState(node.ip);
+  const [role, setRole] = useState(node.role);
+  const [os, setOs] = useState(node.os);
+  const [sshUser, setSshUser] = useState(node.ssh?.user || 'root');
+  const [sshPassword, setSshPassword] = useState(node.ssh?.password || '');
+  const [pingStatus, setPingStatus] = useState<'idle' | 'pending' | 'online' | 'offline'>('idle');
+
+  const handleTestPing = async () => {
+    if (!ip) return;
+    setPingStatus('pending');
+    const result = await testPing(ip);
+    setPingStatus(result);
+  };
+
+  const handleSave = () => {
+    const updatedNode: NodeConfig = {
+      name,
+      ip,
+      role,
+      os,
+      ssh: os === 'Ubuntu 22.04' && sshUser ? { user: sshUser, password: sshPassword } : null
+    };
+    onSave(updatedNode);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-slate-900 rounded-2xl border border-white/10 p-6 w-[500px] max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-100">Edit Node</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Node Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">IP Address</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={ip}
+                onChange={(e) => setIp(e.target.value)}
+                placeholder="192.168.1.XXX"
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+              />
+              <button
+                onClick={handleTestPing}
+                disabled={!ip || pingStatus === 'pending'}
+                className="px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-xs font-medium hover:bg-cyan-400/20 disabled:opacity-50"
+              >
+                {pingStatus === 'pending' ? 'Testing...' : 'Test Ping'}
+              </button>
+            </div>
+            {pingStatus !== 'idle' && pingStatus !== 'pending' && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`h-2 w-2 rounded-full ${pingStatus === 'online' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className={`text-xs ${pingStatus === 'online' ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {pingStatus === 'online' ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+            >
+              <option value="Primary Worker">Primary Worker</option>
+              <option value="Sync Engine">Sync Engine</option>
+              <option value="CDP Chrome">CDP Chrome</option>
+              <option value="AI Ollama">AI Ollama</option>
+              <option value="VPS Hermes">VPS Hermes</option>
+              <option value="Standby">Standby</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Operating System</label>
+            <select
+              value={os}
+              onChange={(e) => setOs(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+            >
+              <option value="Windows 11">Windows 11</option>
+              <option value="Ubuntu 22.04">Ubuntu 22.04</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {os === 'Ubuntu 22.04' && (
+            <>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">SSH User (optional)</label>
+                <input
+                  type="text"
+                  value={sshUser}
+                  onChange={(e) => setSshUser(e.target.value)}
+                  placeholder="root"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">SSH Password (optional)</label>
+                <input
+                  type="password"
+                  value={sshPassword}
+                  onChange={(e) => setSshPassword(e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-sm font-medium hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!name || !ip}
+            className="flex-1 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20 disabled:opacity-50"
+          >
+            Save Changes
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function ReplaceNodeModal({ 
+  onClose, 
+  onSave, 
+  node,
+  clusterData
+}: { 
+  onClose: () => void; 
+  onSave: (oldNode: NodeConfig, newNode: NodeConfig) => void;
+  node: NodeConfig;
+  clusterData: ClusterStatus;
+}) {
+  const [ip, setIp] = useState(node.ip);
+  const [os, setOs] = useState(node.os);
+  const [pingStatus, setPingStatus] = useState<'idle' | 'pending' | 'online' | 'offline'>('idle');
+
+  const liveNode = clusterData.nodes.find(n => n.ip === node.ip);
+
+  const handleTestPing = async () => {
+    if (!ip) return;
+    setPingStatus('pending');
+    const result = await testPing(ip);
+    setPingStatus(result);
+  };
+
+  const handleSave = () => {
+    const newNode: NodeConfig = {
+      ...node,
+      ip,
+      os,
+    };
+    onSave(node, newNode);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-slate-900 rounded-2xl border border-white/10 p-6 w-[500px] max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-100">Replace Hardware — {node.name}</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mb-4 p-3 rounded-lg border border-amber-400/20 bg-amber-400/5">
+          <p className="text-xs text-amber-400 font-medium">History and stats will be preserved</p>
+        </div>
+
+        <div className="space-y-4">
+          {/* Read-only fields */}
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Node Name (preserved)</label>
+            <input
+              type="text"
+              value={node.name}
+              disabled
+              className="w-full rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-slate-600 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-slate-600 mb-1">Role (preserved)</label>
+            <input
+              type="text"
+              value={node.role}
+              disabled
+              className="w-full rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-slate-600 cursor-not-allowed"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">In Stock</label>
+              <input
+                type="text"
+                value={liveNode?.in_stock.toLocaleString() || '0'}
+                disabled
+                className="w-full rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-slate-600 cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Alerts</label>
+              <input
+                type="text"
+                value={liveNode?.alerts || '0'}
+                disabled
+                className="w-full rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-slate-600 cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Tasks</label>
+              <input
+                type="text"
+                value={liveNode?.tasks || '0'}
+                disabled
+                className="w-full rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-sm text-slate-600 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          {/* Editable fields */}
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-xs text-cyan-400 font-medium mb-3">New Hardware Configuration</p>
+            
+            <div className="mb-4">
+              <label className="block text-xs text-slate-400 mb-1">New IP Address</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={ip}
+                  onChange={(e) => setIp(e.target.value)}
+                  placeholder="192.168.1.XXX"
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+                />
+                <button
+                  onClick={handleTestPing}
+                  disabled={!ip || pingStatus === 'pending'}
+                  className="px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-xs font-medium hover:bg-cyan-400/20 disabled:opacity-50"
+                >
+                  {pingStatus === 'pending' ? 'Testing...' : 'Test Ping'}
+                </button>
+              </div>
+              {pingStatus !== 'idle' && pingStatus !== 'pending' && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={`h-2 w-2 rounded-full ${pingStatus === 'online' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                  <span className={`text-xs ${pingStatus === 'online' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {pingStatus === 'online' ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Operating System</label>
+              <select
+                value={os}
+                onChange={(e) => setOs(e.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+              >
+                <option value="Windows 11">Windows 11</option>
+                <option value="Ubuntu 22.04">Ubuntu 22.04</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-sm font-medium hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!ip}
+            className="flex-1 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20 disabled:opacity-50"
+          >
+            Replace Hardware
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // NODE MANAGER VIEW COMPONENT
 // ═══════════════════════════════════════════════════════════════
@@ -695,6 +1029,9 @@ function NodeManagerView({
 }) {
   const [nodesConfig, setNodesConfig] = useState<NodesConfig | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showReplaceModal, setShowReplaceModal] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<NodeConfig | null>(null);
   const [lastSynced, setLastSynced] = useState(new Date());
 
   useEffect(() => {
@@ -718,6 +1055,48 @@ function NodeManagerView({
     saveToStorage(updatedNodes);
     postDiscordTask('ADD_NODE', node);
     gitCommitNodeConfig('ADD_NODE', node.name);
+    setLastSynced(new Date());
+  };
+
+  const handleEditNode = (updatedNode: NodeConfig) => {
+    if (!nodesConfig) return;
+    
+    const updatedNodes = nodesConfig.nodes.map(n => 
+      n.name === updatedNode.name ? updatedNode : n
+    );
+    const updatedConfig = {
+      ...nodesConfig,
+      nodes: updatedNodes,
+      last_updated: new Date().toISOString()
+    };
+    
+    setNodesConfig(updatedConfig);
+    saveToStorage(updatedNodes);
+    postDiscordTask('EDIT_NODE', updatedNode);
+    gitCommitNodeConfig('EDIT_NODE', updatedNode.name);
+    setLastSynced(new Date());
+  };
+
+  const handleReplaceNode = (oldNode: NodeConfig, newNode: NodeConfig) => {
+    if (!nodesConfig) return;
+    
+    // Archive old node data
+    const archiveKey = `${oldNode.name}_replaced_${Date.now()}`;
+    console.log(`[Archive] ${archiveKey}:`, oldNode);
+    
+    const updatedNodes = nodesConfig.nodes.map(n => 
+      n.name === oldNode.name ? newNode : n
+    );
+    const updatedConfig = {
+      ...nodesConfig,
+      nodes: updatedNodes,
+      last_updated: new Date().toISOString()
+    };
+    
+    setNodesConfig(updatedConfig);
+    saveToStorage(updatedNodes);
+    postDiscordTask('REPLACE_NODE', newNode);
+    gitCommitNodeConfig('REPLACE_NODE', newNode.name);
     setLastSynced(new Date());
   };
 
@@ -813,10 +1192,22 @@ function NodeManagerView({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-1.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">
+                      <button 
+                        onClick={() => {
+                          setSelectedNode(node);
+                          setShowEditModal(true);
+                        }}
+                        className="p-1.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300"
+                      >
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button className="p-1.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">
+                      <button 
+                        onClick={() => {
+                          setSelectedNode(node);
+                          setShowReplaceModal(true);
+                        }}
+                        className="p-1.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300"
+                      >
                         <RefreshCcw className="h-4 w-4" />
                       </button>
                       <button 
@@ -857,6 +1248,29 @@ function NodeManagerView({
           onClose={() => setShowAddModal(false)}
           onSave={handleAddNode}
           existingNodes={nodesConfig.nodes}
+        />
+      )}
+      
+      {showEditModal && selectedNode && (
+        <EditNodeModal
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedNode(null);
+          }}
+          onSave={handleEditNode}
+          node={selectedNode}
+        />
+      )}
+      
+      {showReplaceModal && selectedNode && (
+        <ReplaceNodeModal
+          onClose={() => {
+            setShowReplaceModal(false);
+            setSelectedNode(null);
+          }}
+          onSave={handleReplaceNode}
+          node={selectedNode}
+          clusterData={clusterData}
         />
       )}
     </div>
