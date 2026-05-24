@@ -67,7 +67,7 @@ interface ClusterStatus {
   nodes: ClusterNode[];
 }
 
-type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'jobs';
+type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'models' | 'jobs';
 type StatusFilter = 'all' | 'online' | 'standby' | 'offline';
 
 interface NodeConfig {
@@ -1278,6 +1278,349 @@ function NodeManagerView({
 }
 
 // ═══════════════════════════════════════════════════════════════
+// MODEL CONTROL VIEW COMPONENT (Tasks 8 & 9)
+// ═══════════════════════════════════════════════════════════════
+
+const MODEL_REGISTRY = [
+  { id: 'qwen2.5-coder:7b', type: 'local', vram_gb: 4.5, cost_in: 0, cost_out: 0,
+    best_for: ['code','TypeScript','Python'], description: 'Best local model for code' },
+  { id: 'llama3.1:8b', type: 'local', vram_gb: 5.0, cost_in: 0, cost_out: 0,
+    best_for: ['chat','reasoning','analysis'], description: 'Best local model for reasoning' },
+  { id: 'anthropic/claude-haiku-4-5', type: 'cloud', vram_gb: 0, cost_in: 1.0, cost_out: 5.0,
+    best_for: ['simple tasks','config edits'], description: 'Fastest cheapest Claude' },
+  { id: 'anthropic/claude-sonnet-4-5', type: 'cloud', vram_gb: 0, cost_in: 3.0, cost_out: 15.0,
+    best_for: ['complex builds','large files'], description: 'Best balance quality/cost' },
+  { id: 'deepseek/deepseek-v3', type: 'cloud', vram_gb: 0, cost_in: 0.27, cost_out: 1.1,
+    best_for: ['code gen','cheap alt'], description: 'Sonnet quality at haiku prices' },
+  { id: 'anthropic/claude-opus-4', type: 'cloud', vram_gb: 0, cost_in: 15.0, cost_out: 75.0,
+    best_for: ['architecture','hardest bugs'], description: 'Most capable, use sparingly' },
+];
+
+const DEFAULT_ASSIGNMENTS: Record<string, string> = {
+  'Plan Mode': 'anthropic/claude-sonnet-4-5',
+  'Act Mode': 'qwen2.5-coder:7b',
+  'Code Analysis': 'qwen2.5-coder:7b',
+  'Alert Generation': 'llama3.1:8b',
+  'Auto Fixer Simple': 'anthropic/claude-haiku-4-5',
+  'Auto Fixer Complex': 'anthropic/claude-sonnet-4-5',
+  'Discord Writer': 'llama3.1:8b',
+  'SEO Generator': 'anthropic/claude-haiku-4-5',
+  'Cluster Monitor': 'llama3.1:8b',
+};
+
+function ModelControlView({ data }: { data: ClusterStatus }) {
+  const [assignments, setAssignments] = React.useState<Record<string, string>>(DEFAULT_ASSIGNMENTS);
+  const [editingRole, setEditingRole] = React.useState<string | null>(null);
+  const [toast, setToast] = React.useState<string | null>(null);
+  const [costData, setCostData] = React.useState<any>({});
+
+  React.useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get('syndrax_model_assignments', (result) => {
+        if (result.syndrax_model_assignments) {
+          setAssignments(result.syndrax_model_assignments);
+        }
+      });
+    }
+    fetch('/cost_log.json').then(r => r.json()).then(setCostData).catch(() => {});
+  }, []);
+
+  const gpuStats = data?.nodes?.[0]?.gpu_stats;
+  const vramUsed = gpuStats?.vram_used_mb ? (gpuStats.vram_used_mb / 1024).toFixed(1) : '4.8';
+  const vramTotal = gpuStats?.vram_total_mb ? (gpuStats.vram_total_mb / 1024).toFixed(1) : '8.0';
+  const vramPct = gpuStats ? Math.round((gpuStats.vram_used_mb / gpuStats.vram_total_mb) * 100) : 60;
+  const gpuUtil = gpuStats?.gpu_util_pct ?? 34;
+  const gpuTemp = gpuStats?.temp_c ?? null;
+  const gpuName = gpuStats?.name ?? 'RTX 3070';
+
+  const vramColor = vramPct >= 80 ? 'bg-red-400' : vramPct >= 60 ? 'bg-amber-400' : 'bg-cyan-400';
+  const vramText = vramPct >= 80 ? 'text-red-400' : vramPct >= 60 ? 'text-amber-400' : 'text-cyan-400';
+  const tempColor = gpuTemp === null ? 'text-slate-500' : gpuTemp > 85 ? 'text-red-400' : gpuTemp > 70 ? 'text-amber-400' : 'text-emerald-400';
+
+  function handleModelSelect(role: string, modelId: string) {
+    const updated = { ...assignments, [role]: modelId };
+    setAssignments(updated);
+    setEditingRole(null);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ syndrax_model_assignments: updated });
+    }
+    const ts = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+    setToast(`[CONNECTED] Model: ${modelId} | Agent: ${role} | ${ts}`);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const month = new Date().toISOString().slice(0, 7);
+  const todayCost = Object.values((costData[today] || {}) as Record<string, any>)
+    .reduce((s: number, v: any) => s + (v.cost_usd || 0), 0);
+  const monthCost = Object.entries(costData as Record<string, any>)
+    .filter(([d]) => d.startsWith(month))
+    .flatMap(([, models]) => Object.values(models as Record<string, any>))
+    .reduce((s: number, v: any) => s + (v.cost_usd || 0), 0);
+  const localTokens = Object.values(costData as Record<string, any>)
+    .flatMap(d => Object.values(d as Record<string, any>))
+    .filter((v: any) => v.type === 'local')
+    .reduce((s: number, v: any) => s + (v.input_tokens || 0) + (v.output_tokens || 0), 0);
+  const cloudTokens = Object.values(costData as Record<string, any>)
+    .flatMap(d => Object.values(d as Record<string, any>))
+    .filter((v: any) => v.type === 'cloud')
+    .reduce((s: number, v: any) => s + (v.input_tokens || 0) + (v.output_tokens || 0), 0);
+
+  const loadedModel = data?.nodes?.[0]?.model_badge?.[0]?.replace('ollama:', '') ?? null;
+
+  return (
+    <div className="p-4 space-y-4">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-emerald-900/90 border border-emerald-500/50 text-emerald-300 text-xs px-4 py-2 rounded-lg font-mono">
+          {toast}
+        </div>
+      )}
+
+      <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+        <div className="flex gap-6">
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400 uppercase tracking-widest">GPU Status</span>
+              <span className="text-cyan-300 font-bold text-sm">{gpuName}</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-slate-400">VRAM</span>
+                <span className={vramText}>{vramUsed} / {vramTotal} GB</span>
+              </div>
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${vramColor}`} style={{ width: `${vramPct}%` }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-slate-400">Utilization</span>
+                <span className="text-slate-300">{gpuUtil}%</span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-violet-400" style={{ width: `${gpuUtil}%` }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="bg-slate-800/50 rounded p-2">
+                <div className="text-slate-500">Temp</div>
+                <div className={`font-bold ${tempColor}`}>{gpuTemp !== null ? `${gpuTemp}°C` : '--°C'}</div>
+              </div>
+              <div className="bg-slate-800/50 rounded p-2">
+                <div className="text-slate-500">BW</div>
+                <div className="text-cyan-300 font-bold">448 GB/s</div>
+              </div>
+              <div className="bg-slate-800/50 rounded p-2">
+                <div className="text-slate-500">Slots</div>
+                <div className="text-emerald-400 font-bold">1 / 4</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-shrink-0">
+            <svg width="120" height="220" viewBox="0 0 120 220" xmlns="http://www.w3.org/2000/svg">
+              <style>{`
+                @keyframes gpuSpin {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+                .fan-active {
+                  animation: gpuSpin 1.5s linear infinite;
+                  transform-origin: 95px 52px;
+                }
+              `}</style>
+              <rect x="2" y="2" width="116" height="216" rx="6" fill="#070d1a" stroke="#1e3a5f" strokeWidth="1.5"/>
+              <text x="60" y="14" textAnchor="middle" fontSize="6" fill="#1e4a6e" letterSpacing="2">SYNDRAX CLUSTER</text>
+              {[20,32,44,56].map(cy => <circle key={cy} cx="8" cy={cy} r="2" fill="#0a1628"/>)}
+
+              <rect x="12" y="20" width="96" height="44" rx="3" fill="#0a1f0a" stroke="#00ff88" strokeWidth="1"
+                    style={{filter:'drop-shadow(0 0 3px #00ff8855)'}}/>
+              <rect x="12" y="20" width="8" height="44" rx="2" fill="#1a3a1a" stroke="#00cc66" strokeWidth="0.5"/>
+              {[28,35,42].map(cy => <rect key={cy} x="24" y={cy} width="8" height="3" rx="1" fill="#00ff88"/>)}
+              <text x="36" y="38" fontSize="7" fontWeight="bold" fill="#00ff88">RTX 3070</text>
+              <circle cx="95" cy="42" r="10" fill="#0a1f0a" stroke="#00cc66" strokeWidth="0.5"/>
+              <g className="fan-active">
+                {[0,60,120,180,240,300].map(angle => {
+                  const rad = (angle * Math.PI) / 180;
+                  return <line key={angle} x1="95" y1="42"
+                    x2={95 + Math.cos(rad) * 9} y2={42 + Math.sin(rad) * 9}
+                    stroke="#00ff88" strokeWidth="1.5" strokeLinecap="round"/>;
+                })}
+              </g>
+              <circle cx="95" cy="42" r="2.5" fill="#00ff88"/>
+              <circle cx="100" cy="22" r="2.5" fill="#00ff88">
+                <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+              </circle>
+
+              {[72, 118, 164].map((y, i) => (
+                <g key={i}>
+                  <rect x="12" y={y} width="96" height="40" rx="3" fill="#0d0a0a" stroke="#3a1a1a" strokeWidth="1"/>
+                  <rect x="12" y={y} width="8" height="40" rx="2" fill="#1a0a0a" stroke="#2a1010" strokeWidth="0.5"/>
+                  {[y+8, y+16, y+24].map(cy => <rect key={cy} x="24" y={cy} width="8" height="3" rx="1" fill="#1a0808"/>)}
+                  <text x="36" y={y+18} fontSize="5.5" fill="#4a1515">NOT CONFIGURED</text>
+                  <circle cx="95" cy={y+20} r="9" fill="#0d0a0a" stroke="#2a1010" strokeWidth="0.5"/>
+                  {[0,60,120,180,240,300].map(angle => {
+                    const rad = (angle * Math.PI) / 180;
+                    return <line key={angle} x1="95" y1={y+20}
+                      x2={95 + Math.cos(rad) * 8} y2={y+20 + Math.sin(rad) * 8}
+                      stroke="#1a0808" strokeWidth="1.5" strokeLinecap="round"/>;
+                  })}
+                  <circle cx="95" cy={y+20} r="2" fill="#1a0808"/>
+                </g>
+              ))}
+
+              <text x="60" y="212" textAnchor="middle" fontSize="7"
+                fill={gpuTemp === null ? '#2a3a4a' : gpuTemp > 85 ? '#ff4444' : gpuTemp > 70 ? '#ffaa00' : '#00cc44'}>
+                {gpuTemp !== null ? `${gpuTemp}°C` : '--°C'}
+              </text>
+
+              {[30,50,70].map(cx => <rect key={cx} x={cx} y="206" width="12" height="5" rx="1" fill="#0a1628"/>)}
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-3 bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <div className="text-xs text-slate-400 uppercase tracking-widest mb-3">Model Assignments</div>
+          <div className="space-y-2">
+            {Object.entries(assignments).map(([role, modelId]) => {
+              const reg = MODEL_REGISTRY.find(m => m.id === modelId);
+              const isLocal = reg?.type === 'local';
+              const isEditing = editingRole === role;
+              return (
+                <div key={role} className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-400 w-36 flex-shrink-0">{role}</span>
+                  {isEditing ? (
+                    <select
+                      className="flex-1 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-slate-200 text-xs"
+                      defaultValue={modelId}
+                      onChange={e => handleModelSelect(role, e.target.value)}
+                      onBlur={() => setEditingRole(null)}
+                      autoFocus
+                    >
+                      <optgroup label="Local (Free)">
+                        {MODEL_REGISTRY.filter(m => m.type === 'local').map(m => (
+                          <option key={m.id} value={m.id}>{m.id}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Cloud (Paid)">
+                        {MODEL_REGISTRY.filter(m => m.type === 'cloud').map(m => (
+                          <option key={m.id} value={m.id}>{m.id}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-slate-200 font-mono truncate">{modelId}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ${isLocal ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-700/50' : 'bg-blue-900/50 text-blue-400 border border-blue-700/50'}`}>
+                        {isLocal ? 'LOCAL' : 'CLOUD'}
+                      </span>
+                      <span className="text-slate-500 w-24 flex-shrink-0 text-right">
+                        {isLocal ? 'free' : `$${reg?.cost_in ?? '?'}/$${reg?.cost_out ?? '?'}/1M`}
+                      </span>
+                      <button
+                        onClick={() => setEditingRole(role)}
+                        className="text-slate-500 hover:text-cyan-400 flex-shrink-0 transition-colors"
+                      >✎</button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="col-span-2 bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs text-slate-400 uppercase tracking-widest">Cost Tracker</span>
+            <button onClick={() => fetch('/cost_log.json').then(r=>r.json()).then(setCostData).catch(()=>{})}
+              className="text-slate-500 hover:text-cyan-400 text-xs transition-colors">↻</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="bg-slate-800/50 rounded p-2">
+              <div className="text-slate-500 text-xs">Today</div>
+              <div className="text-cyan-300 font-bold text-sm">${todayCost.toFixed(4)}</div>
+            </div>
+            <div className="bg-slate-800/50 rounded p-2">
+              <div className="text-slate-500 text-xs">This Month</div>
+              <div className="text-cyan-300 font-bold text-sm">${monthCost.toFixed(4)}</div>
+            </div>
+            <div className="bg-slate-800/50 rounded p-2">
+              <div className="text-slate-500 text-xs">Local Tokens</div>
+              <div className="text-emerald-400 font-bold text-sm">{localTokens.toLocaleString()}</div>
+            </div>
+            <div className="bg-slate-800/50 rounded p-2">
+              <div className="text-slate-500 text-xs">Cloud Tokens</div>
+              <div className="text-blue-400 font-bold text-sm">{cloudTokens.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="flex items-end gap-1 h-16">
+            {MODEL_REGISTRY.slice(0, 6).map(m => {
+              const todayModelCost = (costData[today] as any)?.[m.id]?.cost_usd ?? 0;
+              const maxCost = Math.max(0.001, todayCost);
+              const pct = Math.round((todayModelCost / maxCost) * 100);
+              const barColor = m.type === 'local' ? 'bg-cyan-500' : 'bg-blue-500';
+              return (
+                <div key={m.id} className="flex-1 flex flex-col items-center gap-1">
+                  <div className={`w-full rounded-t ${barColor} opacity-80`} style={{ height: `${Math.max(2, pct)}%` }}/>
+                  <span className="text-slate-600 text-xs truncate w-full text-center" style={{fontSize:'8px'}}>
+                    {m.id.split('/').pop()?.split(':')[0].slice(0,6)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs text-slate-400 uppercase tracking-widest mb-3">Model Registry</div>
+        <div className="grid grid-cols-3 gap-3">
+          {MODEL_REGISTRY.map(m => {
+            const isActive = loadedModel && m.id.includes(loadedModel.split(':')[0]);
+            const isLocal = m.type === 'local';
+            return (
+              <div key={m.id} className={`bg-slate-900/50 border rounded-xl p-3 space-y-2 ${isActive ? 'border-violet-500/50' : 'border-slate-700/50'}`}>
+                <div className="flex items-start justify-between gap-1">
+                  <span className="text-slate-200 font-bold text-xs font-mono leading-tight">{m.id.split('/').pop()}</span>
+                  <div className="flex gap-1 flex-shrink-0">
+                    {isActive && <span className="text-xs px-1.5 py-0.5 rounded bg-violet-900/50 text-violet-400 border border-violet-700/50 font-bold">ACTIVE</span>}
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${isLocal ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-700/50' : 'bg-blue-900/50 text-blue-400 border border-blue-700/50'}`}>
+                      {isLocal ? 'LOCAL' : 'CLOUD'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-slate-500 text-xs">{m.description}</div>
+                {isLocal
+                  ? <div className="text-emerald-400 text-xs">VRAM: {m.vram_gb} GB &nbsp;·&nbsp; Free</div>
+                  : <div className="text-slate-400 text-xs">${m.cost_in}/${m.cost_out} per 1M tokens</div>
+                }
+                <div className="flex flex-wrap gap-1">
+                  {m.best_for.map(tag => (
+                    <span key={tag} className="text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/50">{tag}</span>
+                  ))}
+                </div>
+                <select
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-400 text-xs"
+                  defaultValue=""
+                  onChange={e => { if (e.target.value) handleModelSelect(e.target.value, m.id); e.target.value = ''; }}
+                >
+                  <option value="">Set as default for...</option>
+                  {Object.keys(DEFAULT_ASSIGNMENTS).map(role => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN DASHBOARD COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -1590,6 +1933,12 @@ export default function DashboardPage() {
               )}
             </button>
             <button
+              onClick={() => setActiveTab('models')}
+              className={`text-sm font-medium ${activeTab === 'models' ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              Models
+            </button>
+            <button
               onClick={() => setActiveTab('jobs')}
               className={`text-sm font-medium ${activeTab === 'jobs' ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
             >
@@ -1658,6 +2007,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-center h-full">
               <p className="text-slate-500">Alerts view - Coming soon</p>
             </div>
+          )}
+          
+          {activeTab === 'models' && (
+            <ModelControlView data={data} />
           )}
           
           {activeTab === 'jobs' && (
