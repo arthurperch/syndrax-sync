@@ -20,10 +20,11 @@ import DescriptionBuilder from './components/DescriptionBuilder';
 import { AccountManager } from './pages/AccountManager';
 import { WarmupAgent } from './pages/WarmupAgent';
 import ImagePipeline from './pages/ImagePipeline';
+import PricingDashboard from './pages/PricingDashboard';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tone = "cyan" | "blue" | "violet" | "pink";
+type Tone = "cyan" | "blue" | "violet" | "pink" | "amber";
 type View = "menu" | string;
 
 interface SyncStats {
@@ -98,6 +99,14 @@ const tone: Record<Tone, {
     activeGlow: "shadow-[0_0_28px_rgba(217,70,239,0.16)]",
     dot: "bg-fuchsia-400",
   },
+  amber: {
+    num: "text-amber-300", text: "text-amber-200",
+    border: "border-amber-400/40", bg: "bg-amber-400/10",
+    chip: "border-amber-400/50 bg-amber-400/10 text-amber-100",
+    glow: "shadow-amber-500/20",
+    activeGlow: "shadow-[0_0_28px_rgba(251,191,36,0.16)]",
+    dot: "bg-amber-400",
+  },
 };
 
 // ─── Chrome helpers ───────────────────────────────────────────────────────────
@@ -134,7 +143,8 @@ const pipeline = [
   { id: "08.1", key: "dashboard",  title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
   { id: "09", key: "warmup",       title: "Warmup Agent",      phase: "Phase 7",   icon: TrendingUp,   t: "cyan"   as Tone, desc: "eBay account warmup • daily limits • safe listing schedule" },
   { id: "10", key: "images",       title: "Image Pipeline",    phase: "Phase 8",   icon: Image,        t: "violet" as Tone, desc: "Fetch • resize • optimize • preview product images" },
-  { id: "10.5", key: "finance",    title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
+  { id: "10.5", key: "pricing",    title: "Pricing Strategy",  phase: "Phase 9",   icon: TrendingUp,   t: "amber"  as Tone, desc: "Rules engine • dynamic pricing • margin analysis" },
+  { id: "11.5", key: "finance",    title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "11", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
 ];
 
@@ -857,6 +867,7 @@ export default function App() {
     accounts:     ({ onBack }) => <AccountManager onBack={onBack} />,
     warmup:       ({ onBack }) => <WarmupAgent onBack={onBack} />,
     images:       ({ onBack }) => <ImagePipeline onBack={onBack} />,
+    pricing:      ({ onBack }) => <PricingDashboard onBack={onBack} />,
   };
 
   const renderDetail = () => {
