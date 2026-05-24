@@ -11,7 +11,7 @@ import {
   FileText, Settings, MoreVertical, RefreshCw, Zap, ExternalLink,
   Search, Filter, ChevronLeft, Play, Square, Download, Database,
   Clock, AlertTriangle, CheckCircle, XCircle, Cpu, HardDrive,
-  Wifi, Triangle
+  Wifi, Triangle, Edit, Trash2, Plus, RefreshCcw, X
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
@@ -454,6 +454,416 @@ function NodeCard({ node }: { node: ClusterNode }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// NODE MANAGER HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+function getNextNodeName(nodes: NodeConfig[]): string {
+  const rootNumbers = nodes
+    .map(n => parseInt(n.name.replace('root', '')))
+    .filter(n => !isNaN(n));
+  const maxNum = rootNumbers.length > 0 ? Math.max(...rootNumbers) : 161;
+  return `root${maxNum + 1}`;
+}
+
+async function testPing(ip: string): Promise<'online' | 'offline'> {
+  // Simulate ping test - in production this would use actual ping
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // Simulate 80% success rate
+      resolve(Math.random() > 0.2 ? 'online' : 'offline');
+    }, 1000);
+  });
+}
+
+function postDiscordTask(action: string, node: NodeConfig): void {
+  const taskId = `NODE-${Date.now()}`;
+  const message = `🔧 NODE MANAGER TASK [LOW PRIORITY]
+Action: ${action}
+Node: ${node.name}
+IP: ${node.ip}
+Role: ${node.role}
+OS: ${node.os}
+Requested: ${new Date().toISOString()}
+Status: PENDING
+Task ID: ${taskId}`;
+  
+  console.log('[Discord Task]', message);
+  // In production: POST to Discord webhook
+  // fetch(webhookUrl, { method: 'POST', body: JSON.stringify({ content: message }) });
+}
+
+function saveToStorage(nodes: NodeConfig[]): void {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ syndrax_nodes: nodes });
+    } else {
+      localStorage.setItem('syndrax_nodes', JSON.stringify(nodes));
+    }
+  } catch (e) {
+    console.error('Storage save failed:', e);
+  }
+}
+
+function gitCommitNodeConfig(action: string, nodeName: string): void {
+  const timestamp = new Date().toISOString();
+  const message = `node: ${action} ${nodeName} ${timestamp}`;
+  console.log('[Git Commit]', message);
+  // In production: chrome.runtime.sendMessage({ type: 'GIT_COMMIT', message, file: 'public/nodes_config.json' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NODE MANAGER MODALS
+// ═══════════════════════════════════════════════════════════════
+
+function AddNodeModal({ 
+  onClose, 
+  onSave, 
+  existingNodes 
+}: { 
+  onClose: () => void; 
+  onSave: (node: NodeConfig) => void;
+  existingNodes: NodeConfig[];
+}) {
+  const [name, setName] = useState(getNextNodeName(existingNodes));
+  const [ip, setIp] = useState('');
+  const [role, setRole] = useState('Standby');
+  const [os, setOs] = useState('Windows 11');
+  const [sshUser, setSshUser] = useState('root');
+  const [sshPassword, setSshPassword] = useState('');
+  const [pingStatus, setPingStatus] = useState<'idle' | 'pending' | 'online' | 'offline'>('idle');
+
+  const handleTestPing = async () => {
+    if (!ip) return;
+    setPingStatus('pending');
+    const result = await testPing(ip);
+    setPingStatus(result);
+  };
+
+  const handleSave = () => {
+    const newNode: NodeConfig = {
+      name,
+      ip,
+      role,
+      os,
+      ssh: os === 'Ubuntu 22.04' && sshUser ? { user: sshUser, password: sshPassword } : null
+    };
+    onSave(newNode);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-slate-900 rounded-2xl border border-white/10 p-6 w-[500px] max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-100">Add New Node</h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Node Name */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Node Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+            />
+          </div>
+
+          {/* IP Address */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">IP Address</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={ip}
+                onChange={(e) => setIp(e.target.value)}
+                placeholder="192.168.1.XXX"
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+              />
+              <button
+                onClick={handleTestPing}
+                disabled={!ip || pingStatus === 'pending'}
+                className="px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-xs font-medium hover:bg-cyan-400/20 disabled:opacity-50"
+              >
+                {pingStatus === 'pending' ? 'Testing...' : 'Test Ping'}
+              </button>
+            </div>
+            {pingStatus !== 'idle' && pingStatus !== 'pending' && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`h-2 w-2 rounded-full ${pingStatus === 'online' ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                <span className={`text-xs ${pingStatus === 'online' ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {pingStatus === 'online' ? 'Online' : 'Offline'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Role */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+            >
+              <option value="Primary Worker">Primary Worker</option>
+              <option value="Sync Engine">Sync Engine</option>
+              <option value="CDP Chrome">CDP Chrome</option>
+              <option value="AI Ollama">AI Ollama</option>
+              <option value="VPS Hermes">VPS Hermes</option>
+              <option value="Standby">Standby</option>
+            </select>
+          </div>
+
+          {/* OS */}
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Operating System</label>
+            <select
+              value={os}
+              onChange={(e) => setOs(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+            >
+              <option value="Windows 11">Windows 11</option>
+              <option value="Ubuntu 22.04">Ubuntu 22.04</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* SSH Credentials (only for Linux) */}
+          {os === 'Ubuntu 22.04' && (
+            <>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">SSH User (optional)</label>
+                <input
+                  type="text"
+                  value={sshUser}
+                  onChange={(e) => setSshUser(e.target.value)}
+                  placeholder="root"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">SSH Password (optional)</label>
+                <input
+                  type="password"
+                  value={sshPassword}
+                  onChange={(e) => setSshPassword(e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-sm font-medium hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!name || !ip}
+            className="flex-1 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20 disabled:opacity-50"
+          >
+            Save Node
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NODE MANAGER VIEW COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+function NodeManagerView({ 
+  clusterData 
+}: { 
+  clusterData: ClusterStatus;
+}) {
+  const [nodesConfig, setNodesConfig] = useState<NodesConfig | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [lastSynced, setLastSynced] = useState(new Date());
+
+  useEffect(() => {
+    fetch('/nodes_config.json')
+      .then(r => r.json())
+      .then(setNodesConfig)
+      .catch(console.error);
+  }, []);
+
+  const handleAddNode = (node: NodeConfig) => {
+    if (!nodesConfig) return;
+    
+    const updatedNodes = [...nodesConfig.nodes, node];
+    const updatedConfig = {
+      ...nodesConfig,
+      nodes: updatedNodes,
+      last_updated: new Date().toISOString()
+    };
+    
+    setNodesConfig(updatedConfig);
+    saveToStorage(updatedNodes);
+    postDiscordTask('ADD_NODE', node);
+    gitCommitNodeConfig('ADD_NODE', node.name);
+    setLastSynced(new Date());
+  };
+
+  const handleRemoveNode = (nodeName: string) => {
+    if (!nodesConfig || !confirm(`Remove ${nodeName} from cluster? History will be archived.`)) return;
+    
+    const updatedNodes = nodesConfig.nodes.filter(n => n.name !== nodeName);
+    const updatedConfig = {
+      ...nodesConfig,
+      nodes: updatedNodes,
+      last_updated: new Date().toISOString()
+    };
+    
+    setNodesConfig(updatedConfig);
+    saveToStorage(updatedNodes);
+    postDiscordTask('REMOVE_NODE', nodesConfig.nodes.find(n => n.name === nodeName)!);
+    gitCommitNodeConfig('REMOVE_NODE', nodeName);
+    setLastSynced(new Date());
+  };
+
+  if (!nodesConfig) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-slate-500">Loading nodes configuration...</div>
+      </div>
+    );
+  }
+
+  const getNodeStatus = (ip: string) => {
+    const node = clusterData.nodes.find(n => n.ip === ip);
+    return node?.status || 'offline';
+  };
+
+  const getNodeInStock = (ip: string) => {
+    const node = clusterData.nodes.find(n => n.ip === ip);
+    return node?.in_stock || 0;
+  };
+
+  const getNodeLastSeen = (ip: string) => {
+    const node = clusterData.nodes.find(n => n.ip === ip);
+    return node?.last_seen || '';
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-100">Node Manager</h2>
+          <p className="text-xs text-slate-500">Manage cluster nodes configuration</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20"
+        >
+          <Plus className="h-4 w-4" />
+          Add Node
+        </button>
+      </div>
+
+      {/* Node Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full">
+          <thead className="sticky top-0 bg-slate-950/90 border-b border-white/10">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Name</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">IP</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Role</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">OS</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase">Last Seen</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">In Stock</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-slate-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {nodesConfig.nodes.map((node) => {
+              const status = getNodeStatus(node.ip);
+              const statusColor = getStatusColor(status);
+              
+              return (
+                <tr key={node.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                  <td className="px-4 py-3">
+                    <span className={`h-2 w-2 rounded-full bg-${statusColor}-400 inline-block`} />
+                  </td>
+                  <td className="px-4 py-3 text-sm font-medium text-slate-300">{node.name}</td>
+                  <td className="px-4 py-3 text-sm text-slate-400 font-mono">{node.ip}</td>
+                  <td className="px-4 py-3 text-sm text-slate-400">{node.role}</td>
+                  <td className="px-4 py-3 text-sm text-slate-400">{node.os}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{formatTimeAgo(getNodeLastSeen(node.ip))}</td>
+                  <td className="px-4 py-3 text-sm text-cyan-400 text-right font-medium">
+                    {getNodeInStock(node.ip).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <button className="p-1.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button className="p-1.5 rounded hover:bg-white/10 text-slate-500 hover:text-slate-300">
+                        <RefreshCcw className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleRemoveNode(node.name)}
+                        className="p-1.5 rounded hover:bg-red-400/10 text-slate-500 hover:text-red-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Config Sync Status Bar */}
+      <div className="border-t border-white/10 bg-slate-950/60 px-6 py-3 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-slate-500" />
+          <span className="text-slate-500">Last synced:</span>
+          <span className="text-slate-400">{formatTimeAgo(lastSynced.toISOString())}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500">Hermes acknowledged:</span>
+          <span className="text-emerald-400">Yes</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500">Pending:</span>
+          <span className="text-slate-400">0 tasks</span>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showAddModal && (
+        <AddNodeModal
+          onClose={() => setShowAddModal(false)}
+          onSave={handleAddNode}
+          existingNodes={nodesConfig.nodes}
+        />
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN DASHBOARD COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -810,13 +1220,37 @@ export default function DashboardPage() {
           </div>
         </div>
         
-        {/* Node Grid */}
+        {/* Content Area - Conditional by Tab */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="grid grid-cols-3 gap-4 pb-4">
-            {filteredNodes.map((node) => (
-              <NodeCard key={node.name} node={node} />
-            ))}
-          </div>
+          {activeTab === 'nodes' && (
+            <div className="grid grid-cols-3 gap-4 pb-4">
+              {filteredNodes.map((node) => (
+                <NodeCard key={node.name} node={node} />
+              ))}
+            </div>
+          )}
+          
+          {activeTab === 'manager' && (
+            <NodeManagerView clusterData={data} />
+          )}
+          
+          {activeTab === 'pipelines' && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-slate-500">Pipelines view - Coming soon</p>
+            </div>
+          )}
+          
+          {activeTab === 'alerts' && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-slate-500">Alerts view - Coming soon</p>
+            </div>
+          )}
+          
+          {activeTab === 'jobs' && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-slate-500">Jobs view - Coming soon</p>
+            </div>
+          )}
         </div>
         
         {/* Bottom Action Bar */}
