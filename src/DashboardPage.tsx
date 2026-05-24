@@ -67,8 +67,22 @@ interface ClusterStatus {
   nodes: ClusterNode[];
 }
 
-type TabView = 'nodes' | 'pipelines' | 'alerts' | 'jobs';
+type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'jobs';
 type StatusFilter = 'all' | 'online' | 'standby' | 'offline';
+
+interface NodeConfig {
+  name: string;
+  ip: string;
+  role: string;
+  os: string;
+  ssh: { user: string; password: string } | null;
+}
+
+interface NodesConfig {
+  nodes: NodeConfig[];
+  last_updated: string;
+  version: number;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // MOCK DATA FALLBACK
@@ -729,6 +743,12 @@ export default function DashboardPage() {
               className={`text-sm font-medium ${activeTab === 'nodes' ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
             >
               Node Cluster
+            </button>
+            <button
+              onClick={() => setActiveTab('manager')}
+              className={`text-sm font-medium ${activeTab === 'manager' ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              Node Manager
             </button>
             <button
               onClick={() => setActiveTab('pipelines')}

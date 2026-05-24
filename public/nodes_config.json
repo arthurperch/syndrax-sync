@@ -1,0 +1,72 @@
+{
+  "nodes": [
+    {
+      "name": "root162",
+      "ip": "192.168.1.162",
+      "role": "Primary Worker",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root163",
+      "ip": "192.168.1.163",
+      "role": "Sync Engine",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root164",
+      "ip": "192.168.1.164",
+      "role": "CDP Chrome",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root165",
+      "ip": "192.168.1.165",
+      "role": "AI Ollama",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root166",
+      "ip": "192.168.1.166",
+      "role": "VPS Hermes",
+      "os": "Ubuntu 22.04",
+      "ssh": {
+        "user": "root",
+        "password": ""
+      }
+    },
+    {
+      "name": "root167",
+      "ip": "192.168.1.167",
+      "role": "Standby",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root168",
+      "ip": "192.168.1.168",
+      "role": "Standby",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root169",
+      "ip": "192.168.1.169",
+      "role": "Standby",
+      "os": "Windows 11",
+      "ssh": null
+    },
+    {
+      "name": "root170",
+      "ip": "192.168.1.170",
+      "role": "Standby",
+      "os": "Windows 11",
+      "ssh": null
+    }
+  ],
+  "last_updated": "2026-05-23T19:44:00Z",
+  "version": 1
+}
