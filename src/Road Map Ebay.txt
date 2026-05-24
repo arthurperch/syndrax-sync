@@ -1,0 +1,1203 @@
+﻿Welcome to Invisible Store
+If you're reading this, you’re probably looking for a real way to make money online—without inventory, without ads, and without the guesswork.
+That’s exactly what this guide delivers.
+I started with nothing but a phone and a simple copy-paste method—and built an eBay business that now brings in $1,000-$3,000/month in profit per store.
+No warehouse.
+No upfront inventory.
+No paid ads.
+Instead, I used Amazon’s inventory, eBay’s traffic, and a strategy built on speed and scale.
+This playbook gives you the same system:
+* Start fast with sniping and bulk listing
+* Use proven products that are already selling
+* Scale with automation using EcomSniper and low-cost VAs
+
+You’ll see exactly how I went from that first $12 snow globe sale...
+To thousands of sales, and ultimately, seven figures in revenue.
+Whether your goal is $500/month or a full-time income, this is the roadmap.
+Let’s get started.
+
+
+
+
+Table of Contents
+
+
+
+
+Introduction: My First Sale Changed Everything
+ Chapter 0: The Journey Ahead
+ Chapter 1: What Is eBay Dropshipping?
+ Chapter 2: Why It Works
+ Chapter 3: The Buyer’s Journey
+ Chapter 4: The Algorithm
+ Chapter 5: My Item Didn’t Sell — What’s Wrong?
+ Chapter 6: Introducing Bulk Theory
+ Chapter 7: Momentum
+ Chapter 8: Sniping
+ Chapter 9: Product Substitution (Advanced Sniping)
+ Chapter 10: Avoiding Suspensions
+ Chapter 11: Never Cancel Orders — Turn Problems into Profits Instead
+ Chapter 12: Customer Service = Sales
+ Chapter 13: Promotions – The Tools That 2x Your Sales
+ Chapter 14: Optimizations to 3x Your Sales
+ Chapter 15: What Tracking Number Do I Upload to eBay?
+ Chapter 16: How to Get High Listing Limits on eBay
+ Chapter 17: eBay Account Setup
+ Chapter 18: I’m Not Getting Sales
+ Chapter 19: How to Scale with Multiple Accounts and the Agency Model
+ Chapter 99: 90-Day Roadmap
+
+Introduction: My First Sale Changed Everything
+  
+Seven years ago, I was standing at my security job during yet another overnight shift. At just $15 an hour, buried under credit card debt and struggling financially, I knew something had to change.
+
+
+Late one night, scrolling endlessly through YouTube for ways to earn extra income, I discovered a video about eBay dropshipping. Intrigued but skeptical, I decided to give it a try right there and then—after all, what did I have to lose?
+
+
+I grabbed my smartphone, found an interesting item on Amazon—a snowman-shaped globe—and quickly listed it on eBay. To my surprise, the next day while heading to work, my phone buzzed with an eBay notification: I’d made my first sale for $22. Checking Amazon, I saw that it cost just $9.99. In mere minutes, I’d earned $12 in profit—almost the equivalent of an hour at my security job.
+
+
+That single moment sparked something inside me, a feeling that I'd discovered a powerful opportunity. Fast forward to today, and that small first sale has grown into seven figures in total sales on eBay. Along the way, I made countless mistakes, endured tough lessons, and navigated plenty of uncertainty—but I also gained valuable experience, insights, and proven strategies that transformed my life.
+
+
+Now, my passion is to share what I’ve learned. This book is more than a quick-start guide or a simple how-to—it’s a complete educational resource designed to help you build your own profitable eBay dropshipping business, whether your goal is an extra $1,000 per month or enough to replace your current income entirely.
+
+
+In the pages ahead, you'll find a deep dive into core concepts, practical strategies, and proven methods that truly work. I’ll share the exact insights that have enabled me—and many others—to build a successful online business from home.
+
+
+I also created a software called EcomSniper to automate many repetitive tasks in eBay dropshipping. But truthfully, software alone isn’t enough to ensure success. Knowledge, training, and clarity are what really drive sustainable growth—and that's exactly what you'll gain here.
+
+
+My hope is that by the end of this book, you'll have not only the strategies and tools but also the confidence and clarity you need to succeed. If you're ready, let’s get started—I’m excited to share this journey with you.
+
+   * Sammy
+
+
+
+The Journey Ahead
+
+
+Let’s talk about expectations. I know dropshippers who are making $200k/month in profit, and I know dropshippers who are making $100/month. From my years of experience and observations in the community, a realistic target for a beginner is $1–3k/month in profit per eBay account. As a beginner, your goal should be to accomplish this on one single account—nothing more—at first.
+The reason behind this is that you need to spend your time building a foundation, learning the ins and outs of the business, and managing edge cases. This is a business like any other: first, you work in the business before you start working on the business. That means you have to learn how to get sales, do customer service, and handle cases yourself before you pass these tasks on to a VA (Virtual Assistant). A VA is someone who works for you at about $2/hour, so that you can focus on scaling the business with multiple accounts. This turns it into a true business rather than self-employment.
+To train a VA properly, you have to know the business inside and out; that way, you can pass your knowledge down. This is a crucial step because I have seen multiple people scale beyond their limits—without understanding how to handle edge cases or resolve common issues—and get their stores suspended. So start with one account, master it, and then move on to the next as you keep growing.
+This business has no limits. You can scale as far as you want; it’s a blue ocean. Why might someone want multiple accounts later? Diversification. In case something goes wrong on one account, you have multiple streams to keep you stable instead of putting all your eggs in one basket. You also get more sales with 2 or more accounts because eBay likes to spread sales among different users.
+Don’t worry about multiple accounts yet. In the next guide—once you (hopefully) accomplish the $1–3k/month milestone—we will talk about expansion in more detail. There are users who have made far more than $3k/month on a single account. One of our users reached $15k/month in profit with just one account, so that is totally doable. We anchor $1–3k/month as a realistic goal that almost anyone can achieve.
+By this point, you should already have an idea of what dropshipping is. But let’s do a quick recap for anyone who isn’t familiar:
+  
+
+
+
+
+
+
+
+Chapter 0: What Is eBay Dropshipping?
+Let’s keep it super simple.
+eBay dropshipping is just copying and pasting. That’s it.
+Here’s how it works:
+You find an item on Amazon—let’s say a toothbrush for $10. You copy the title, pictures, and description, and you list that exact item on eBay for $30.
+Someone finds your eBay listing and buys it. You then go to Amazon, buy the toothbrush for $10, and ship it directly to your eBay customer.
+You didn’t hold inventory. You didn’t buy the item in advance. You just matched a buyer with a product and pocketed the difference.
+In this case, you made $20 profit.
+Boom. That’s eBay dropshipping.
+I started on eBay Canada and sourced from Amazon Canada. That was my first setup as I live in Canada. It was clean, simple, and local—everything arrived fast, and I didn’t deal with international issues. Later on, I moved to eBay.com and sourced from Amazon.com.
+What I recommend for beginners is to do the same: start with your local eBay and your local Amazon. If you're in the UK, use eBay UK and Amazon UK. If you're in Germany, use eBay DE and Amazon DE, Ebay AUS and Amazon AUS, and so on. Once you're making consistent profit, then you can branch out into international markets.
+This book is going to show you exactly how to do it right—without getting flagged, suspended, or wasting time on the wrong strategies.
+Let’s keep going.
+
+
+  
+
+
+
+Chapter 1: Are You Allowed To Dropship on eBay?
+
+
+Let’s answer the question everyone asks: “Can you dropship on eBay?” I’ve been dropshipping on eBay for 8 years, and I get this question all the time.
+The short answer is yes—but with conditions.
+Here’s what eBay’s official policy says:
+"Drop shipping, where you fulfill orders directly from a wholesale supplier, is allowed on eBay. Remember that if you use drop shipping, you’re still responsible for the safe delivery of the item within the time frame stated in your listing and for the buyer’s overall satisfaction with their purchase. However, listing an item on eBay and then purchasing it from another retailer or marketplace that ships directly to your customer is not allowed on eBay."
+This policy came out in 2019. Before that, it was totally fine to dropship from places like Amazon and Walmart. Everyone was doing it.
+So what changed?
+What Happened in 2019?
+COVID.
+When the pandemic hit, millions of people around the world lost their jobs. Especially in countries like India, Pakistan, Bangladesh, Vietnam, China, and other developing nations. Dropshipping became the go-to side hustle. It was cheap to start—all you needed was internet and the ability to copy and paste.
+So what happened? eBay got flooded. Thousands of brand-new sellers with no idea how to actually run a business. They didn’t ship on time. They didn’t respond to messages. They gave horrible buyer experiences.
+And when buyers had bad experiences, they didn’t just blame the seller. They blamed eBay.
+eBay spends millions on ads to bring in customers. So if someone has a bad experience and never shops on eBay again, that’s a major loss for them.
+To stop the bleeding, eBay drew a hard line: no more dropshipping from retailers. It was the easiest way to cut out the lowest-effort sellers.
+What Happens If You Do It Anyway?
+If eBay detects that your new account is dropshipping from retailers, it’ll likely get suspended immediately.
+But if you’re already up and running, eBay might not suspend you. Instead, they’ll flag your account.
+What’s a flag? It’s basically a soft penalty—your listings still show up, but your visibility tanks. You get less traffic, fewer impressions, fewer sales.
+Why Doesn’t eBay Just Ban Dropshippers Altogether?
+This is a good question. Because let’s be real: eBay can spot dropshippers instantly. We use sniping techniques to find thousands of other dropshippers. eBay isn’t stupid—they could ban all of us tomorrow if they really wanted to.
+But they don’t. Why?
+Because we make them money.
+Even flagged dropshippers still bring in tons of revenue. And more importantly, we fill the gaps in the market.
+Here’s what I mean: If a buyer is searching for a new microwave, and all they see on eBay are old, used ones—they’re going to bounce. But a dropshipper can list a brand new model from Amazon. Now that buyer stays on eBay and makes a purchase.
+So what eBay does is smart:
+   * They flag the dropshipper.
+
+   * They show the reseller’s listing first.
+
+   * If the reseller doesn’t convert the buyer, then they show the dropshipper’s listing.
+
+This way, eBay keeps the buyer, keeps the sale, and still profits off dropshippers—without letting us dominate the platform.
+How to Avoid Getting Flagged
+The best way to avoid getting flagged is to not use any API-based software.
+Let me explain it super simply:
+API just means a software that plugs directly into your eBay account. It's like giving a bot direct access to your eBay, like a backdoor. eBay knows it’s a software doing the work—not you—and that’s a red flag.
+Instead, use tools that don’t connect via API. My tool, EcomSniper, is a Chrome extension. It automates your browser to act like a real person. So to eBay, it just looks like you’re doing everything manually.
+Or you can do it totally by hand. Or use virtual assistants (VAs)—we’ll talk more about that later.
+If you avoid API tools, you avoid one of the biggest reasons accounts get flagged.
+So Can You Dropship on eBay or Not?
+Yes, you can. I’m doing it right now.
+But you have to be smart. You can’t just jump in, spam thousands of Amazon items, and expect eBay to love you.
+You need to:
+      * Warm up your account properly (covered in Chapter 16)
+      * Focus on customer service
+      * Ship on time
+      * Avoid using API-connected tools
+
+If you do those things, you can run a successful dropshipping business on eBay—even if you’re technically bending the rules.
+Some of my accounts are flagged. Some are clean. I’ve managed both, and the difference comes down to one thing: buyer experience.
+If buyers are happy, you’ll be fine.
+If buyers are mad, it’s only a matter of time before you get flagged or worse.
+Search "eBay dropshipping flag" online and you’ll see how many people have been hit. It’s real. But it’s avoidable.
+So yeah—you can dropship on eBay. Just do it responsibly.
+  
+
+
+
+Chapter 2: Why it works
+One of the most common questions I get is: Why does this work? Why would someone buy from you when they can buy it cheaper on Amazon?
+Let me tell you about my first sale. I was working a security job 8 years ago and watched a YouTube video about this business. On my iPhone, I took a snapshot of a snow globe, copied the details onto eBay with a higher price, and—boom—the next day, I made a sale. My mind was blown. I have sold over 300k items (probably more) by now, but that first sale remains a staple in my memory. I spent years trying to understand why this works, and I believe I finally understand it. I’ll share it with you:
+In one word: Convenience.
+Picture this: You’re at a baseball stadium, starving, and the nearest food is 30 minutes away. A vendor comes to you and offers a hot dog for $10. Would you take it? Of course—you’re starving. But why didn’t you just drive to Costco and get their $1 hot dog, which is $9 cheaper? Convenience. The vendor came to you at the right time and place. If you were full or already at Costco, you wouldn’t buy the hot dog from him.
+Our job as eBay dropshippers is to present people with the items they need exactly when they need them. A person who finds a solution in your listing often won’t spend additional time searching other marketplaces. We live in a world of “I want it now,” and eBay makes this easy for us. 
+
+Yes, the prices are higher than Amazon—but most eBay buyers aren’t looking for the cheapest option. They’re buying based on urgency, trust, and convenience. As long as the price is within their budget and solves a need, they’ll buy. That’s why this works.
+
+More on that in the next chapter.
+
+
+
+
+  
+
+Chapter 3: The Buyers Journey
+Every time we list an item, it appears at the top of search results for a short period. Let’s give an example:
+Suppose Sally is looking for a Mexican-style striped table runner. She has a budget of $200. While she’s shopping, you list an item titled “Mexican Style Table Runner” for $150. At the moment Sally searches eBay for “Mexican Style Table Runner,” your listing pops up. She checks the picture, she’s interested, clicks your listing, scrolls through the images, and decides she wants it. She sees the $150 price, which doesn’t exceed her budget, and notices you offer free returns, so there’s no risk. She clicks “Buy It Now” and purchases the item.
+Congratulations—you just sold a table runner. Now you go to Amazon and purchase it for $70, netting a cool $80 in profit.
+As we discussed in the previous chapter, convenience is what seals the deal. Your listing popped up at the perfect time for Sally, and the price was within her budget, so she had no real incentive to go anywhere else. This works with anything—if people feel a product solves their problem and the price is acceptable, they’ll often just buy it immediately.  
+Chapter 4: The Algorithm
+Now that you understand that convenience is what sells your items, let’s talk about how to make consistent sales on eBay. We need to understand eBay’s algorithm to craft a strategy.
+An algorithm is a set of rules assigned to a machine to follow. If we understand the rules, we can use them to our advantage.
+eBay’s main algorithm is called Cassini. Cassini decides which listings show up for buyers. Imagine if we found a hack to keep our items permanently at the top of eBay’s search. We’d make millions (if not billions) because most buyers, once they see a convenient option in their budget, won’t look further.
+Sadly, that’s not how it works. You can’t just list an item and stay at the top of the search results forever. It wouldn’t make sense for eBay to give that power to any random seller who might not know how to run a business on the platform.
+So how do you get to the top of the search? That’s the real question.
+There Are Two Ways:
+         1. Use the “New Listing” boost. All newly listed items get a temporary boost to the top of search results. Then they begin to fall steadily every few minutes. For example, for a search query like “table runner,” there might be 120k results (60 pages). Every few minutes, your new item drops lower in the results—onto the next page—unless it gets a sale. If it sells quickly, that sale boosts it back to the top, and you keep that position for about an hour. Another sale can extend it for 10 hours, and so on. Because of this, it’s incredibly important to get a sale as quickly as possible for each newly listed item, giving it the best chance to remain near the top.
+         2. Get sales. As mentioned above, every sale extends your listing’s “lease” in the search rankings. The more sales you get, the higher and longer it stays in search results. If you have a continuous trend of sales, your item could remain at the top indefinitely.
+So, to recap: new items get a short-term boost. If they fail to get a sale within that window, they drop lower in the rankings and can eventually become almost invisible. However, a sale at any point can revive the listing and push it back up. This is true even for items on page 60; enough sales can rapidly propel them back to page 1.
+But why does eBay do this? Not because they care about you. eBay is obligated to test newly listed items so they can discover the next “hot seller” or trend. If eBay didn’t test new listings, they’d miss out on products that could sell well—and they make money from seller fees. The more fees we pay, the more eBay earns. So Cassini is designed to surface promising items that will make eBay the most money possible.
+With that in mind, don’t stress too much about finding the “perfect” price. As long as an item’s price is within the customer’s budget, there’s a chance it will sell. We’ll discuss more in the next chapter.  
+Chapter 5: My Item Didn’t sell, what's wrong?
+So, you listed an item and it didn’t sell. Let’s break down a few reasons why it might not have sold.
+First, understand that once an item misses that initial sale, it’s likely buried at the bottom of the search results. It’s no longer getting many (or any) views.
+Why did it fail to sell during its boost? Several possible explanations:
+         1. The first buyers eBay showed it to were just window shopping with no real intent to buy. They saw your item, didn’t feel compelled, and so the algorithm demoted your listing.
+         2. Interested buyers might have considered it too expensive and decided not to purchase, causing the listing to drop in search.
+         3. Buyers saw a cheaper option on the same page, so they purchased that one instead.
+         4. The wrong buyers are finding your item because you don’t have the right keywords; they click in, realize it’s not what they want, and bounce.
+How to Address These Issues
+         1. End the item and relist it. Doing so makes your listing appear as a new item in eBay’s search results, giving it another chance to sell and possibly targeting more suitable buyers.
+         2. Lower your price and relist it. If you suspect the price scared buyers away, this is a direct way to test a more appealing cost.
+         3. Change your title or image, then relist it. Stand out from competitors or use different keywords so you appear in more relevant searches.
+         4. Do both: change your title/price/image, and relist.
+All of this is easier said than done. Personally, I focus on method #1—simply ending and relisting items—because it’s the least mentally taxing. If I relist 10,000 items, a portion of them will sell the second time around, often due to timing or better visibility. Any items that fail to sell after 90 days—even with relisting—I just delete, rather than spending time tweaking titles or prices in detail. We will touch more on this topic in the later chapters.  
+
+Chapter 6: Introducing Bulk Theory
+By now, you understand the buyer’s funnel, the eBay algorithm, and why some items don’t sell. Here’s the simplest and most effective strategy:
+List 10,000 items.
+That’s it.
+In short, Bulk Theory is essentially mass testing. Instead of spending hours researching products one-by-one, you’re letting the market tell you what works. You're leveraging the Law of Large Numbers, a foundational principle in probability that states the more times you run an experiment—in this case, listing products—the closer your results will align with the expected outcome.
+Think of it this way: out of those 10,000 listings, some items will have the perfect title but not the right price. Some will have the ideal price but a weak title. But about 500 or so items will naturally land in the sweet spot—they’ll have both the right title and the right price—and these items will generate consistent sales.
+This approach removes the guesswork. You don’t need to do extensive product research because your listings themselves become the test. Each listing gets an initial visibility boost on eBay, and if items don’t sell quickly, simply end and relist them to regain that boost. After around 90 days, remove the items that still haven't sold and replenish your store with fresh inventory.
+Bulk Theory isn’t about perfect predictions—it’s about repeatedly testing and letting the data guide you. Your goal is simple: master this process on one account first, consistently earning between $1,000–$3,000 per month. Once you have this down, you’ll have a scalable strategy that can easily grow to multiple accounts, significantly multiplying your earnings.
+
+
+
+
+  
+
+Chapter 7: Momentum 
+At this point, I’ve observed over 200 eBay accounts start from zero and scale up to anywhere between $4,000 and $20,000 in monthly sales. This raises an important question: Why is there such a significant difference?
+Let’s briefly set the stage: Imagine listing 10,000 random items from Amazon onto eBay. While some accounts may reach only around $4,000 in sales, others quickly scale past $20,000—even though they list similar types of items. Why does this happen?
+The primary reason comes down to momentum. Accounts that reach higher revenue almost always start strong. Within their first 100 listings, certain products gain quick traction and generate sales. These early sales create a powerful snowball effect: eBay recognizes your account as trustworthy and rewards subsequent listings by placing them higher in search results. Increased visibility translates directly into more sales, further building your momentum.
+To quantify this, imagine eBay assigns your first 100 listings a baseline visibility score of 50 out of 100. If several of these items sell quickly, eBay boosts your account's ranking, and your next listings might start at 70 out of 100, significantly improving their chances of selling. Conversely, if none of your initial items sell, your next batch might start lower, around 40 out of 100, reducing visibility and future sales potential.
+In other words, on eBay, sales lead directly to more sales.
+To quickly create initial momentum, the most effective method is sniping—researching high-demand items already selling well on eBay, and listing them slightly cheaper than your competitors. We’ll cover this sniping method in detail in the next chapter.
+The second-best way, based on years of dropshipping experience, is to start by bulk listing items at a 40–50% markup. After years of testing thousands of items, we’ve found this markup range consistently generates sales, even with just your first 1,000 listings. For example, if an item costs $10 on Amazon, you'd list it for $15 on eBay. A real-world example would be taking a common kitchen product—like a stainless steel measuring cup set priced at $10 on Amazon—and listing it on eBay at around $14.99. Our extensive testing has repeatedly shown that this pricing method reliably produces early sales, building your momentum.
+Starting strong with proven methods is not just helpful—it’s crucial. The faster you build initial momentum, the easier it becomes to scale your eBay dropshipping business.
+  
+
+
+
+Chapter 8: Sniping
+When I first started dropshipping on eBay, I wasted countless hours guessing what might sell. I guessed titles, guessed prices, and guessed which images would attract buyers. As you'd expect, my results were unpredictable at best.
+Then I discovered Sniping, and suddenly things started making sense.
+Here's why sniping works:
+Every sale on eBay comes down to four elements:
+         * Title: Helps buyers find your product through search.
+
+         * Price: Buyers naturally choose the best deal for the exact item.
+
+         * Product Features & Type: Matches exactly what the buyer is looking for.
+
+         * Product Images: Clear, attractive images build trust and encourage clicks.
+
+If someone else is consistently selling an item on eBay, it means they got all these elements right. Sniping just involves copying exactly what already works, then slightly lowering the price to offer a better deal.
+Practical Steps to Sniping:
+Step 1: Find a Dropshipper
+ Start by identifying just one seller clearly dropshipping from Amazon. Paste an Amazon best-seller title into eBay and look for identical items priced higher than on Amazon. That's your dropshipping competitor.
+Step 2: Check What's Selling
+ Go to that seller’s eBay profile and filter their listings to show only "Sold Listings." Pick items that have multiple sales (eBay shows the exact count on the listing).
+(Optional tip: Using a tool like EcomSniper speeds this step up by instantly revealing the exact number of sales.)
+Step 3: Find Your Main Competitor’s Price
+ Copy the product title, paste it into eBay’s search bar, and sort by "Lowest Price + Shipping." Scroll down until you find a seller with the exact same item, ignoring different products that may appear cheaper. This seller is your main competitor.
+(This method ensures accuracy, since sometimes unrelated or lower-quality items appear cheaper—like from overseas sellers.)
+Step 4: Slightly Undercut the Competitor
+ Use eBay’s “Sell Now” button directly on the competitor’s listing to quickly fill in details, then list your item just slightly cheaper—even a few cents lower (e.g., $14.95 vs. $15.00). That small price difference immediately makes your listing more attractive.
+Step 5: Repeat and Scale
+ Keep repeating this simple method regularly. Sniping proven products at slightly lower prices quickly grows your store and eliminates guesswork.
+Quick Real-Life Example:
+            * A seller consistently sells a "Stainless Steel Measuring Cup Set" at $15.
+
+            * You list the exact same set at $14.95.
+
+            * Buyers prefer your listing because it’s slightly cheaper for the same trusted product.
+
+Sniping is simple and effective, but sometimes you run into a problem: the source product is suddenly too expensive or unavailable. In these cases, you’ll use an advanced strategy called Product Substitution, which we’ll cover clearly in Chapter 9.
+
+
+  
+
+
+
+
+
+Chapter 9: Product Substitution (Advanced Sniping)
+Now that you've mastered sniping, you'll inevitably encounter situations where the exact Amazon product you've found is either too expensive or unavailable. Does this mean your research was wasted?
+Definitely not. This is precisely when Product Substitution (Advanced Sniping) becomes essential.
+What is Product Substitution?
+Product substitution is similar to sniping but involves replacing the original Amazon product your competitor used with a slightly different but related item. You're still using the proven success elements of the original listing—Title, Price, Product Type + Features, and Images—but substituting a different source product.
+Before we dive into practical examples, let's clarify a fundamental idea:
+Understanding Product Differentiation
+Product differentiation simply means offering something unique compared to what's already in the market—even a saturated market with clearly defined prices.
+For example, if black T-shirts sell consistently at $10, introducing grey T-shirts priced at $15 can still attract buyers because it offers an alternative. Product substitution isn't necessarily about competing on price but providing appealing options to customers.
+The Four Elements of a Successful eBay Listing
+Every successful eBay sale is built on these four key elements:
+               * Price (P)
+               * Product Type + Features (F)
+               * Title (T)
+               * Images (I)
+
+In perfect sniping scenarios, you match these elements exactly:
+                  * (P) Price: Equal or slightly lower than the competitor (1.0)
+                  * (F) Product Type + Features: Exact match (1.0)
+                  * (T) Title: Proven exact title (1.0)
+                  * (I) Images: Proven exact images (1.0)
+
+Multiplying these ideal conditions illustrates maximum sale probability:
+(P) 1.0 × (F) 1.0 × (T) 1.0 × (I) 1.0 = 1.0 (100%)
+This "100%" scenario essentially guarantees sales.
+How Product Substitution Affects Your Probability
+When substituting products, at least one element changes. Here's how clearly it affects your sale probability:
+                     * Above 100%: Your substitution is more attractive (e.g., better images or lower price). You might even outperform the original.
+
+                     * 100%: Exact sniping conditions—sales virtually guaranteed.
+
+                     * Below 100%: Each deviation reduces your chances.
+
+Practical Scenarios
+Let's clearly illustrate these concepts with realistic examples.
+Case Study #1: Only Images Differ
+You've identified a successful eBay listing titled "12-inch Non-Stick Frying Pan – Black," selling consistently at $25. But the identical Amazon item costs $50—too expensive to list profitably.
+Instead, you find another similar 12-inch pan on Amazon priced at just $5. You list it at $24.99, matching the competitor’s title, features, and price, but with different images.
+Here's how the images impact your probability:
+                        * Better Images:
+
+(P) 1.0 × (F) 1.0 × (T) 1.0 × (I) 1.5 = 1.5 (150%)
+Your listing may even outperform the original.
+                           * Average Images:
+
+1.0 × 1.0 × 1.0 × 1.0 = 1.0 (100%)
+Sales virtually guaranteed.
+                              * Worse Images:
+
+1.0 × 1.0 × 1.0 × 0.7 = 0.7 (70%)
+Still likely to sell, but less consistently.
+Practical Tip: If uncertain about image quality, list multiple similar items (5–10 variations). Some will naturally have superior images, maximizing sales potential and reducing uncertainty.
+Case Study #2: Adjusting Product Features (Multipack Differences)
+You find a successful eBay listing, "Paper Cups - 200 Pack," selling consistently at $50. The exact 200-pack on Amazon is unavailable, but a similar 100-pack is available for $10.
+Clearly adjust your listing:
+                                 * Adjust Title: from "Paper Cups - 200 Pack" to "Paper Cups - 100 Pack."
+
+                                 * Adjust Price: Since 200-pack sells for $50, list your 100-pack at $24.99 (based on $25 per 100 cups).
+
+Probability breakdown (assuming different images):
+(P) 1.0 × (F) 1.0 × (T) 1.0 × (I) 0.8 = 0.8 (80%)
+Important Takeaway: Always adjust your title and price based on per-unit value. Even larger packs (like a 500-pack for $50) remain profitable if priced proportionately ($124.99).
+Case Study #3: Price and Images Differ
+You find a popular eBay listing, "Floral Table Runner," consistently selling for $100. The identical item on Amazon is unavailable, and the nearest alternative costs more ($150). You list it at $200 to maintain profitability.
+Probability evaluation:
+                                    * Price (P): Higher, less attractive = 0.5
+
+                                    * Features (F): Exact match = 1.0
+
+                                    * Title (T): Proven title = 1.0
+
+                                    * Images (I): Different, uncertain quality; attractive images = 1.2, average images = 0.8
+
+Attractive images:
+0.5 × 1.0 × 1.0 × 1.2 = 0.6 (60%)
+Average images:
+0.5 × 1.0 × 1.0 × 0.8 = 0.4 (40%)
+Even with a higher price, appealing images can partially offset this disadvantage due to product differentiation. Some buyers prefer your unique pattern, even at a premium price.
+Key Takeaway: Higher prices must be offset by strong elements like attractive images. Product differentiation can still give you a competitive edge.
+Wrapping It All Together
+The real power of product substitution is threefold:
+                                       1. Efficiency: You never waste your research; you always find a way to list.
+
+                                       2. Profit Margins: Unlike pure sniping, which often offers smaller margins (10–30%), substitution gives you greater control and allows significantly higher markups (even 100% or more).
+
+                                       3. Unlimited Product Research: Sniping typically requires finding other dropshippers' products. Product substitution isn't limited by this—every eBay seller becomes a potential source for profitable products. It’s truly a golden research method that ensures long-term, sustainable profitability.
+
+  
+
+Chapter 10: Avoiding Suspensions
+In the next chapter, we'll dive into the detailed game plan. However, before we do, it's critical that we discuss how to avoid eBay account suspensions so you can build a business that will stand the test of time.
+What 8 Years of Dropshipping on eBay Taught Me About Avoiding Suspension
+I often get asked how to prevent eBay account suspensions while dropshipping. After 8 years in this business, I've rarely experienced suspensions, and there's a clear reason for that.
+The key is understanding eBay's primary concern: their bottom line. Anything negatively impacting their revenue or reputation will prompt eBay to take action against your account.
+This breaks down into two primary categories:
+                                          * Bad Buyer Experience (BBE)
+                                          * Fraud and Risk Management
+
+Let's go through each.
+A) Bad Buyer Experience (BBE)
+Concept
+An unhappy buyer negatively affects eBay because unhappy buyers might leave the platform, request refunds, or cancel orders. In all these scenarios, eBay loses money—both the shopper and their fees.
+How Buyers Express Discontent:
+                                             * Leaving negative feedback
+                                             * Opening a case (Item Not Received)
+                                             * Requesting a return
+                                             * You canceling an order
+
+Of these, opening a case is the most damaging, as eBay directly loses fees and must intervene.
+How to Handle Each Scenario:
+1. Negative Feedback
+Negative feedback usually indicates poor communication. Most buyers will reach out before taking further action. Great customer service, even without an immediate solution, can prevent negative feedback.
+I often use ChatGPT, pasting the entire conversation and instructing it to "make him happy." ChatGPT then provides effective responses.
+If negative feedback still occurs, I typically offer a refund but always confirm beforehand if that resolves their issue. Once they're satisfied, I kindly ask them to revise their feedback.
+2. Item Not Received Cases
+Buyers usually open these cases because they genuinely didn't receive their item. I don't upload tracking directly to eBay (More on this later), but instead proactively message buyers with the expected delivery date once items ship. 
+Personally, I sell low-risk items like pillows, pillowcases, and tea leaves. These kinds of products don’t attract fraudsters the same way high-ticket electronics or phones do. If a buyer says they didn’t receive their order, I usually just believe them. I also reach out to Amazon and tell them the same thing—they almost always refund me, so I don’t lose money.
+If a case does get opened, I act fast. I try to close the situation before eBay steps in, because if they do, it counts as a defect and that hurts your account.
+Here’s exactly what I send the buyer in one single message:
+"Hey! Just wanted to follow up since the carrier marked this as delivered. Sometimes they leave it in weird spots—mailroom, back porch, even with a neighbour. Would you mind checking around real quick just to be sure? If not, no worries—just let me know. I’ll go ahead and start the process on my side. These days, with so many package thefts happening, I have to file a police report to get my refund from the courier. Totally routine, but just wanted to confirm with you first before I do that. Appreciate you for checking and getting back to me."
+That message sounds friendly and innocent, but it creates just enough hesitation in case someone is trying to scam. A lot of the time they reply, "Oh wait—I just found it."
+And if they still say it's missing, I just refund them and move on. I’d rather protect my account and keep the buyer happy than risk a defect. Since Amazon gives me a refund too, I’m usually covered either way.
+So the play is simple: use low-risk items, communicate once and clearly, and close the case before eBay has to get involved.
+
+
+
+
+3. Return Requests
+Initially, I offer a partial refund. If they accept, great—problem solved (I try to make sure I'm still profitable if possible or break even). If they insist on a return, I provide them with an Amazon return label, which is free for us, so we never lose money on returns. The main thing I do that keeps me safe is that I refund buyers before eBay steps in to avoid intervention. Any time ebay gets involved it will give you a defect on your account, thus leading to a higher chance of suspensions. Always close the refund request as fast as possible. 
+4. Order Cancellation
+Common cancellation reasons:
+                                                * Unprofitable item: Ship anyway—it's better than risking your account.
+                                                * Out-of-stock item: (Covered in next Chapter.)
+
+B) Fraud and Risk Management
+Reasons for Suspension (Fraud/Risk Management)
+1. Listing High-Risk Items on a New Account
+eBay flags new accounts listing high-risk items like TVs, Xboxes, or iPhones. To avoid flags, "warm up" your account by listing low-risk products such as books, mugs, or snacks during your first week. In the second week, transition to dropshipping items.
+2. Growing Too Rapidly
+Rapid sales spikes, like jumping from $5,000 to $100,000 monthly, alert eBay. Gradual growth is crucial. If you've consistently sold $5k/month, aim for $7k next month, progressively increasing and establishing trust with eBay.
+Implementing these practices has significantly reduced my risk of suspension over the past 8 years.
+  
+
+Chapter 11: Never Cancel Orders—Turn Problems into Profits Instead
+Alright, I just had a chat with a beginner who was canceling orders on his eBay account because they weren't profitable. This is a huge mistake—one of the worst things you can do when dropshipping on eBay. Let me quickly explain why.
+Why Canceling Orders Will Hurt Your eBay Business
+Every time you cancel an order:
+                                                   * You upset the customer, possibly causing them to leave eBay permanently.
+                                                   * You hurt eBay’s business because they lose their transaction fees and trust in you.
+
+Canceling too often makes eBay see you as risky, and you’ll eventually get suspended. This is one of the biggest reasons eBay doesn’t like dropshippers—because beginners make this mistake all the time.
+My Proven Framework for Handling Out-of-Stock and Price Issues
+I've spent years developing and perfecting this customer service framework. I use it constantly, and it works. It not only helps protect your account—it turns a negative situation into a profit opportunity. You don’t even need to write these messages yourself. Let ChatGPT handle it. Just plug this into ChatGPT:
+"Using the customer service framework provided, craft a friendly, personalized message explaining the issue (out-of-stock item or price discrepancy), offer a premium alternative product, include a discount coupon, and ask if they’d prefer a cancellation."
+Now here’s the framework I use, and every time I send this message, it follows this exact structure.
+
+
+Stage 0: Find Look-a-like Product / Search Other Suppliers
+Search on Amazon/Walmart and every other store online to find the exact same product. If you find it then great, ship it out from that supplier and call it a day. If you're not able to find the exact same product, look for another product that looks identical and the brand is just different. These are called look-a-like-products. Private labels buy them in bulk from China and attach their own brand to it. This only works if the brand is a generic brand or something no one ever heard of. Don’t do this for big brands like NIKE-DEWALT. You get the picture. If after checking multiple suppliers you're not able to find a look-a-like then go to Step 1. 
+Stage 1: Immediate and Friendly Communication
+Reach out to the customer fast. Make them feel like they matter.
+                                                      * Talk like a human, not a business.
+                                                      * Roll out the red carpet.
+                                                      * Don’t delay—get ahead of it.
+
+Example Message (includes coupon upfront):
+"Hey Jim, I just found out the iPhone 13 you ordered got damaged in the tornado down in Texas. I’m really sorry about that. I run a small family business, and I just want to make this right. Would it be cool if I sent you the iPhone 14 instead? It’s actually more expensive, but I’d love to cover the difference. I’m also throwing in a 10% off coupon (THANKYOU10) for anything in the store. If that doesn’t work for you, just let me know and I’ll refund you right away. Thanks again for shopping with us—it really means a lot."
+Stage 2: Prevent Negative Feedback
+You never want a buyer to feel ignored or frustrated. Use relatable stories to explain what happened: 
+Example:
+"Hey Jim, I’m super sorry—my 10-year-old son helped me with listings this week and accidentally listed the wrong version. Then it got damaged during shipping with all the bad weather."
+Stuff like this makes you human. Buyers relate. They don’t want perfect—they want honest.
+Stage 3: Profitable Upselling
+This is where you make your money back—and sometimes more.
+                                                         * Find a better or similar item that costs less.
+                                                         * List it in your store at a higher price.
+                                                         * Offer it as an upgrade and make the buyer feel like they’re winning.
+
+Make sure to find an item that has the same Product Type + Features. Don’t offer a coffee mug that's pink when someone bought a black coffee mug! Try to find the same features at a minimum and more if possible. And if you can’t find more features for the same product type, then increase the perceived value of it. 
+Use this as a moment to add value while saving the sale.
+Stage 4: Only Cancel If the Customer Asks
+Cancellation is the absolute last resort.
+                                                            * Never cancel an order without the buyer saying it first.
+                                                            * eBay’s bots scan messages—you can’t fake this.
+                                                            * If the buyer wants to cancel, select "buyer requested to cancel."
+
+Message Template:
+"If none of these options work for you, Jim, just let me know if you'd prefer a refund and I’ll process it right away—whatever works best for you."
+
+
+  
+
+
+
+What If The Buyer Doesn't Respond?
+If the buyer doesn’t respond, then just send him the message and the day before the item is set to be over due on ebay, mark the item as shipped and inform the buyer you did that to wait for his response. This keeps your account safe, and because you messaged the buyer it should alleviate some pressure from his side. Follow up with him every day for the next week, and if wants to cancel the order, then process a refund. 
+This Takes Too Much Time
+I get it, it's time consuming. However, selling on ebay is sales. Sales is what makes you money. With this product substitution framework, you can potentially make 40$. Lets say it takes you an hour to do this, that was an hour spent in exchange for 40$. That is a pretty strong return on your time. In the future, you can have a VA automate this process, but to train them you need to master it. So don't skip out on this.It is so much easier to upsell a buyer then it is to find another buyer. 
+
+
+Important Note on Price Discrepancies
+If you’re about to cancel an order just because you’re losing money—don’t.
+                                                               * That sale will boost your product ranking.
+                                                               * It helps build momentum.
+                                                               * It protects your account.
+
+Take the loss now. It’ll pay you back tenfold later.
+
+The Exception: If you are losing more than $50 or a very unreasonable amount, then yes tell the buyer that a mistake happened, blame a 3rd party, and give him a choice to either cancel the item or pay the remaining balance. As long as you are giving him options and genuinely show you care about him, you will be able to appease him. 
+Pro Tip: Don’t be afraid to call the buyer and explain the situation, it really shows you care and went the extra mile to service him, and when buyers see you rolling out the red carpet for them, then it becomes hard to be angry at you. 
+Quick Recap
+                                                                  * Never cancel orders unless the buyer directly asks.
+                                                                  * Message buyers like a friend—not like a corporation.
+                                                                  * Use problems as a way to upsell and build relationships.
+                                                                  * Always give them options. Let them feel in control.
+                                                                  * Use ChatGPT to save time and keep your responses consistent.
+
+It's All About Sales
+At the end of the day, we’re on eBay to sell. That means we’re in the business of sales, and sales is all about trust and making people happy.
+Every time something goes wrong, that’s your moment to level up your sales skill and turn it into a win.
+That’s why this framework works. It’s not just about keeping your account safe—it’s about creating profit from problems.
+They say, “a bird in the hand is worth two in the forest.” What that means here is—you already have the buyer’s money. You already know what they want. All you have to do is offer them a great alternative that hits the same product type and features—and make it feel personal.
+So when you’re picking that alternative, don’t be lazy. If they bought a black leather wallet, give them something that’s also black, leather, and the same style—or even better. Don’t offer them a pink one and expect it to work.
+When you do this right, you’ll:
+                                                                     * Keep the sale
+                                                                     * Keep the customer
+                                                                     * Protect your account
+                                                                     * And make even more money than you expected
+
+That’s what real salesmanship on eBay looks like.
+
+
+  
+
+
+
+Chapter 12: Customer Service = Sales
+We touched on sales, but now let’s talk about customer service, and how it relates. This is going to be extremely simple—but it’s one of the most powerful parts of your business.
+Here’s the whole play:
+Respond to every customer. That’s it.
+If someone messages you with a question, you answer it. Even if the answer is already in the description, they’re not reading—they’re just asking to save time. And if you give them a fast, friendly reply, that’s often all they need to make the purchase.
+How to Answer Customer Questions
+                                                                        * Go to the Amazon listing and look for the answer.
+                                                                        * If it’s not obvious, check the reviews or Q&A section.
+                                                                        * If it’s still unclear, copy the question and ask ChatGPT to answer it for you.
+                                                                        * Always be honest. Keep it real. Try to genuinely help them.
+
+Remember: You're not just answering a question—you’re solving their problem.
+Why This Matters for the Algorithm
+eBay tracks how fast you respond to buyers. The faster you reply, the more engaged you seem, and eBay rewards that by ranking you higher in search.
+So if someone messages you and you answer within minutes? That’s a signal to eBay that you’re a high-quality seller.
+The Psychology of Customer Service
+If someone messages you, that’s a hot lead. They’re already interested. All they’re waiting for is a reason to trust you.
+Your message is your shot. Show them you’re real. Show them you care. Even a few friendly words can make all the difference.
+Bottom Line
+                                                                           * Always reply.
+                                                                           * Reply fast.
+                                                                           * Be helpful.
+                                                                           * Be human.
+
+This is how you turn a message into a sale.
+
+
+  
+
+Chapter 13: Promotions – The Tools That 2x Your Sales
+We’ve talked about customer service, product strategy, and building trust. At this point, you should have a solid understanding of how to run and grow your eBay business.
+Now let’s talk about the tools eBay gives you to scale—specifically, Promoted Listings. These are your secret weapon to doubling or even tripling your sales with just a few clicks.
+Why You Should Always Use Promoted Listings
+Promoted listings account for over half of the traffic to my store. If you’re not running them, you’re missing a huge chunk of potential visibility.
+Did you know the first 4 spots on the search results page are reserved for promoted listings? Even the products that show up on your competitor’s listings—that’s promoted traffic. If you're not running ads, you’re invisible in those spots.
+And here's the key: eBay rotates those top 4 listings regularly—almost hourly. That means if you're running promoted listings, eBay will eventually give your items a chance to be seen. They want more sellers getting sales, not just one big seller dominating everything.
+Now let’s break down the types of campaigns and how I personally run them.
+
+
+The 3 Types of Promoted Listings
+1. Standard Campaigns (Cost Per Sale)
+This one’s a no-brainer. You only pay when an item sells—so there’s no upfront cost and no risk. I recommend running this on all your items at 4% ad rate. That’s the sweet spot I’ve found that performs best without hurting margins.
+2. PPC (Pay Per Click)
+This is where things get fun. I like to set up a campaign with all my items and use the minimum bid—$0.10 or $0.20 per click.
+Why this works:
+                                                                              * You only get charged if someone actually clicks.
+                                                                              * If someone clicks, they’re obviously engaged and more likely to buy.
+                                                                              * Since your bid is low, eBay only shows the items where there’s little or no competition, so your ads only show up where you have a strong chance of dominating the niche.
+
+If you have 10,000 items, maybe 1,000 of them will get picked up at that low bid—but those 1,000 are pure gold.
+3. Offsite Ads (External Traffic)
+This works just like PPC, but the traffic comes from outside eBay—Google, Facebook Marketplace, etc. I run this the same way: low bids, minimum spend, and let eBay’s engine find the best places to show my listings.
+
+
+The Hidden Bonus of Promoted Listings
+Here's something I’ve noticed that most people don’t talk about:
+When you run promoted listings, your organic impressions go up too.
+Yes, your paid traffic increases—but so does your free traffic.
+Why? Because eBay sees you're investing in the platform, so they reward you with more exposure overall. So even though you're only tracking your promoted traffic, the full effect is even bigger.
+
+
+A Word of Caution: Don’t Go Too High
+Never set your ad rate at 20% or more.
+I’ve seen people do this, and it completely kills their organic traffic. Why? Because once eBay sees you're willing to go that high, they expect you to keep spending that much.
+If you ever try to lower your ad rate later, eBay throttles your traffic to push you back into high spending.
+Stick with low ad rates, like 3–5%. They're effective, sustainable, and they won't mess with your organic reach.
+
+
+You Must Run Promoted Listings
+Promoted listings aren't optional—they’re a core part of scaling your eBay store. Run all three types. Keep your bids low. And remember: it’s not just about showing up—it’s about showing up in the right places, and letting eBay’s algorithm do the heavy lifting for you.
+
+If you're just starting off, then at the minimum do the general campaign, you have nothing to lose and everything to gain. 
+  
+
+Chapter 14: Optimizations to 3x Your Sales
+We already covered promoted listings, but now let’s talk about everyday optimizations that will help you 2x or even 3x your sales with simple tweaks.
+None of this takes long—but the impact is massive.
+________________
+
+
+Markdown Sales (Daily 24-Hour Sales)
+This one’s powerful. A markdown sale is a 24-hour discount event on your items. You want to run one every single day.
+Why 24 hours?
+ Because urgency sells. Every experienced marketer will tell you—80% of purchases happen in the last few hours of a sale.
+eBay helps with this by putting a red countdown next to your item. That red countdown creates FOMO and triggers buyers to act now instead of later.
+What I do:
+                                                                                 * Run a 5% markdown sale on my entire store.
+
+                                                                                 * Make it run every single day for 24 hours.
+
+                                                                                 * When the sale ends, restart it. Always have a live sale running.
+
+This one trick alone can double your conversion rate.
+________________
+
+
+Coupons
+Coupons give people the feeling of extra value—even if the price is the same.
+I always have a 5% off coupon running across my entire store. You can even just raise your prices by 5%, then give the coupon to make it feel like a deal.
+We’ve all seen it: you go to buy something and there’s a coupon. You feel like you're getting a little win—even if it’s tiny. That psychology works.
+Set it once and leave it running forever.
+________________
+
+
+Sending Offers to Watchers
+Watchers are people who are clearly interested. eBay lets you send them a private offer—and you should do it every single time.
+I usually send a 5% offer to anyone watching an item.
+Why it works:
+ They already looked at the item. Sending them a small discount feels personal—like it’s just for them. That small push turns them into a buyer.
+True story:
+ I once found out I had 3,000+ active watchers from over the year. I didn’t even know this feature existed. I sent out offers all at once and made 10 sales within an hour, then another 20 in 24 hours. I was shocked.
+Don’t be like me back then. Use this. Every watcher is a potential customer just waiting for a reason to buy.
+________________
+
+
+Accepting Offers
+Make sure offers are enabled on all your listings. You can bulk edit and turn them on in seconds.
+When someone sends you an offer:
+                                                                                    * If it’s a lowball, check the Amazon price and try to break even or make a small profit.
+
+                                                                                    * If it’s reasonable or profitable—accept it and ship it out.
+
+Why?
+ Because it’s not just about the money. It’s about momentum. Every successful sale increases your item’s rank. The more sales you complete, the easier it becomes to sell again.
+Make the sale. Keep the momentum going.
+________________
+
+
+Refreshing Inventory
+We covered this earlier, but here’s your reminder:
+Use the “End and Sell Similar” method to refresh your stale listings.
+This resets the item and gives it a fresh boost in the algorithm—just like a new listing.
+________________
+
+
+Final Note
+If you do all of these things daily (except coupons since those are always on), you will 3x your sales. No magic. No tricks. Just daily actions that move the needle.
+  
+
+Chapter 15: What Tracking Number Do I Upload to eBay?
+Let me start off by saying this:
+I don’t upload tracking to eBay—and I’ve sold over 300,000 items.
+Here’s why: I use Amazon as my supplier, and I don’t want eBay seeing that the item is coming from an Amazon warehouse. If I upload tracking, eBay can check the origin zip code and easily tell that it’s coming from Amazon.
+So I just skip uploading tracking altogether.
+Doesn’t eBay Want You to Upload Tracking?
+Yes, they do. eBay definitely prefers when sellers upload tracking numbers. But if you don’t? It’s not the end of the world.
+Here’s why:
+What Is eBay Known For?
+eBay is known for stuff like:
+                                                                                       * Trading cards
+                                                                                       * Collectibles
+                                                                                       * Postcards
+                                                                                       * Stamps
+
+A lot of these items sell for $3 to $4, and most sellers ship them without tracking because adding tracking would wipe out all the profit. eBay knows this. They know that a ton of sellers opt out of uploading tracking to save money—otherwise they wouldn’t be able to stay in business.
+So because of that, you’re not required to upload tracking.
+But Won’t the Buyer Wonder Where the Tracking Is?
+Yeah, some buyers will ask. And that’s where customer service comes in.
+When someone places an order, I ship it with Amazon Prime, which usually arrives in 2 days. Right after the order is placed, I send them a quick message:
+"Hey! Just a heads-up—your item is scheduled to arrive tomorrow or the day after. Let me know if you have any questions."
+That’s it. Super simple.
+Because I told them when it’s coming, they’re relaxed. That message does the exact job tracking would’ve done. Most people don’t care about tracking—they care about knowing their item is on the way. If you solve that with a friendly message, you don’t need tracking.
+So What Happens If You Don’t Upload Tracking?
+                                                                                          * You won’t be eligible for Top Rated Seller.
+                                                                                          * To qualify, you need to upload valid tracking on time for 98%+ of your orders.
+                                                                                          * Being Top Rated can boost your sales by 10–15%, so yeah—it’s nice, but I’m okay without it.
+
+Will You Get Suspended for Not Uploading Tracking?
+No. You won’t get suspended just for that.
+As I explained in a previous chapter, eBay suspends sellers for bad buyer experiences, not for skipping tracking. As long as you communicate and the buyer gets their item, you’re fine.
+Want to Upload Tracking Anyway?
+If you really want to upload tracking, there are tools like:
+                                                                                             * TrackTaco
+                                                                                             * Trackerbot
+
+They can convert Amazon’s TBA tracking into something that works with eBay.
+I don’t personally do this, so I won’t go deep into it here—but just know the option exists.
+Final Thoughts
+Skipping tracking isn’t a problem—as long as your customer service is on point.
+At the end of the day, it’s not about the tracking number. It’s about making sure the buyer gets their item and feels taken care of. If you do that? You’re good.
+Chapter 16: How to Get High Listing Limits on eBay
+Alright, before we jump into the full game plan, let’s cover something that can completely stall your business if you don’t handle it right: eBay limits.
+By now, you probably get the gist of how this all works—but let’s break this down clearly.
+What Are eBay Limits?
+eBay gives every account a limit on how many items you can list and the total dollar value of those items.
+For example, if your limit is 50,000 items / $500,000, that means:
+                                                                                                * You can list up to 50,000 items total, and
+
+                                                                                                * Those items can’t add up to more than $500,000 in value
+
+So if you listed 50,000 of the same item at $10 each, you'd max out your entire account—both in quantity and value.
+The Simple Trick: Convert to a Business Account
+The easiest way to get higher limits is to convert your eBay account into a business account.
+                                                                                                   * If you have an LLC, set it up under your LLC.
+
+                                                                                                   * If not, register as a sole proprietorship (you can do this easily).
+
+                                                                                                   * If you're outside the U.S., just set up a business entity in your country or use sole proprietorship.
+
+That’s it. eBay prioritizes business accounts for scaling and often gives them better treatment overall.
+BUT… that doesn’t always work right away.
+What If You Still Get Low Limits?
+You set up your business account. You’re ready to list 50k items.
+But then… eBay only lets you list 10 items total. Or maybe 70 items per month. You’re confused. Frustrated.
+Yeah, I’ve been there.
+Don’t stress—it’s fixable.
+Solution #1: Start Fresh With a New Setup
+Sometimes eBay flags your account setup before you even begin.
+If your account was created under a suspicious IP, device, or cookies, eBay might limit you right out the gate. In this case, converting to business won’t help because the account was already flagged.
+Best move? Create a new, clean account from scratch. Set it up properly from the beginning. (I go over this in detail inside the course.)
+Solution #2: Build Trust With eBay’s Algorithm
+If you want to keep your current account, do this instead:
+                                                                                                      * Spend 1 month building trust with eBay.
+
+                                                                                                      * Focus on customer service, fast shipping, and no order issues.
+
+                                                                                                      * Once you sell about 40% of your active listings, eBay will reward you automatically.
+
+This is called your sell-through rate—and when it’s high, eBay sees your account as healthy and increases your limits.
+Here’s a trick: list cheap items and sell them at break even or even a small loss just to get those sales rolling. I’ve done this before and gotten my limits boosted from 10 items to 50,000 just from showing activity and trust.
+Bottom Line
+Don’t get discouraged if your limits are low. It’s a common problem, and it’s totally fixable.
+There are two paths:
+                                                                                                         1. Clean slate setup with a new account
+
+                                                                                                         2. Build trust and scale naturally by making eBay happy
+
+Either way—you’re in control. Just keep moving.
+  
+
+
+
+
+
+
+
+
+
+
+Chapter 17: eBay Account Set Up
+The first thing I’ll tell you is this: if you can, try your best to dig up an old eBay account. Maybe you created an account a few years ago when you were thinking of buying something. Go find that email, even if the account is still personal.
+Once you find it, convert it into a business account. eBay trusts older accounts more. If that account has sold items in the past—even better. You can usually start listing dropshipping items right away, with little to no warm-up period.
+But if you don’t have an old account, don’t worry. You can still start from scratch—you’ll just need to go through a short warm-up phase.
+Creating a New eBay Account
+When you create a brand new account:
+                                                                                                            * Select Business Account during sign-up.
+                                                                                                            * Then begin the warm-up phase (minimum 3 days, ideally 7).
+
+Here’s why: if you jump in listing TVs, Xboxes, and iPhones on day one, eBay’s fraud detection bots will get nervous. New accounts listing high-risk items is a red flag.
+Instead, warm it up like this:
+The Warm-Up Phase (3–7 Days)
+List low-risk items for the first few days—things that don’t scream dropshipping or scam:
+                                                                                                               * Books
+                                                                                                               * Mugs
+                                                                                                               * Coffee snacks
+                                                                                                               * Office supplies
+
+Use real-looking photos:
+                                                                                                                  * Don’t use Amazon stock photos.
+                                                                                                                  * Take your own pictures or grab images from the web and snip them (removes metadata).
+
+Make your listings look natural, like a regular person is just selling things around the house.
+After 3–7 days of normal activity, you can start listing dropshipping products confidently.
+What If You Already Have an eBay Account?
+If you’ve sold items before on an older eBay account—even better. Just convert it into a business account, and you can skip the warm-up phase completely.
+That’s the fastest way to get started without triggering any risk flags.
+Set the foundation right, and your eBay account will be much smoother to grow. Don’t rush it—eBay’s trust is everything when building a long-term dropshipping business.
+  
+
+
+Chapter 99: 90 Day Road Map 
+
+
+
+
+Daily Task (“Do These Every Day, No Matter What”)
+                                                                                                                     * List 100 items in bulk every day beginning week 2.
+                                                                                                                     * Send offers to watchers
+                                                                                                                     * Accept all offers
+                                                                                                                     * Keep markdown sale active
+
+
+
+Phase 1: Setup 
+Week Number
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+	Sunday
+	Week 1
+	Setup Ebay Account Ch.0
+
+Watch Sniping Technique Training Ch.1 M.5-6
+
+
+Snipe 50 
+	Snipe 50 
+	Get First Sale
+
+Watch: Order Fulfillment Training
+Ch.3 
+
+Fulfil Order
+	Watch: Bulk Listing Training
+Ch.1 M.1-4
+
+Set Markup 50%
+
+Bulk 100
+	Watch: Promotions Training
+Ch.2
+
+Create Markdown Sale 
+
+Bulk 100
+
+	Bulk 100
+	Bulk 100
+	Week 2
+	Set Markup 60%
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 3
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 4
+	Set Markup 70%
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Total Listings: 3000
+
+Goals:
+                                                                                                                     * Set up eBay account
+                                                                                                                     * Get first sale
+                                                                                                                     * Apply initial optimizations
+                                                                                                                     * Begin Bulk Listing
+
+
+
+Phase 2: Growth
+
+Week Number
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+	Sunday
+	Week 5
+	Start Using Tracker
+	Begin Using End & Sell Similar Every day
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 6
+	Set Markup 80%
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 7
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 8
+	Set Markup 90%
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Total Listings: 6000
+
+Goals:
+-Add End & Sell Similar Daily to Non-Neogitables
+
+
+Phase 3: Get Profitable
+Week Number
+	Monday
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+	Sunday
+	Week 5
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 6
+	Set Markup 100%
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 7
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Week 8
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	
+
+	Total Listings: 10000
+
+
+Goals:
+-Add End & Sell Similar Daily to Non-Neogitables
+
+
+
+
+
+
+Chapter 18: I’m Not Getting Sales
+So now that you've got the roadmap, some of you will still have this thought:
+“I listed items… why am I not getting any sales yet?”
+I hear this constantly from new users. Within their first week of joining EcomSniper, they message us saying things like:
+“I didn’t get any sales today… Am I flagged?”
+“Did eBay shadowban me?”
+Let me clear this up right now:
+No, you are not flagged. No, you are not shadowbanned.
+________________
+
+
+The Real Reason You're Not Seeing Sales Yet
+You’ve listed a few hundred items—maybe even a couple thousand. That’s a great start.
+But it’s not enough.
+Until you hit 10,000 active listings, you’re still in the setup phase. That’s where the results are inconsistent. You’ll have some good days, some bad. That’s normal.
+This isn’t a glitch. It’s just math.
+________________
+
+
+Why 10K Listings Is the Magic Number
+After helping hundreds of sellers and analyzing over 200 stores, the pattern is clear:
+                                                                                                                     * Stores under 10K listings = random, volatile sales
+
+                                                                                                                     * Stores over 10K listings = stable, daily sales
+
+Why? Because every listing is just a lottery ticket.
+The more tickets you have, the more predictable the wins become.
+________________
+
+
+Sales Are a Side Effect of Volume
+Here’s the mental shift you need to make:
+Sales are not your goal. Listings are.
+Sales are what happen after you’ve hit critical mass.
+If 100 listings don’t sell, that’s expected. If 10,000 don’t sell, that’s when we step in to investigate.
+________________
+
+
+You're Not Behind—You're Just Not Done Yet
+If you’re feeling discouraged, don’t be. You’re not broken.
+You’re just not done.
+You’re still in Phase 1 of the 90-day plan. The magic doesn’t fully happen until:
+                                                                                                                        * You hit 10,000 listings
+
+                                                                                                                        * You keep momentum with daily listing
+
+                                                                                                                        * The algorithm learns to trust your store
+
+________________
+
+
+Your Only Job Right Now
+If you’re under 10K listings, there is only one mission:
+List 100 products per day until you reach 10,000.
+That’s it. Don’t overthink it. Don’t tweak, pause, or panic.
+Just trust the system and keep listing.
+Your results will come—once you finish building the machine.
+
+
+  Chapter 19: How to Scale with Multiple Accounts and the Agency Model
+So before we begin this chapter, I want to say — yeah, I do cover how to create multiple eBay accounts under your own name inside the EcomSniper course. But that’s an advanced convo. We’re talking about LLCs, IPs, eBay’s internal detection systems — it gets deep. That kind of setup deserves its own guide, because this one is just to get you started. Scaling is a whole different game.
+Now — before I show you how to scale with multiple accounts, I want to make one thing clear:
+You can take a single eBay account really far if you want to. You’re not capped.
+You can list 25,000 items, sell on multiple different eBay marketplaces (like .com, .co.uk, .ca, etc.), and aggressively optimize your store. You can prune your catalog, focus only on what’s selling, and stack your best-performing listings. One of our EcomSniper users, Chris, made $14,000 profit in a single month from just one account. So it’s 100% doable. You can make as much as you want with one store.
+So why do we even talk about multiple accounts?
+Because of ROI.
+Getting one store to $1K–$3K/month in profit only takes about 30 minutes a day. But taking that same store to $10K/month? The workload increases a lot. At that point, you're basically managing a full-time operation — customer service, restocks, product refresh, price management, etc.
+That’s why I prefer scaling sideways. I’d rather build another store and repeat the simple system — because the return on time is higher. And if you want to stick to one account? No problem. Just keep listing, prune your underperformers, double down on what’s working, and keep growing. It’s your business — do what fits your style.
+Also, there’s the stability factor.
+If you put all your eggs in one basket and something happens to that account — it could wipe out your entire income. But if you have multiple stores, you’re insulated. If one account goes down, you still have others bringing in profit. That kind of diversification is key if you’re serious about long-term dropshipping.
+________________
+
+
+What is the eBay Agency Model?
+It’s simple. You onboard someone from the US, UK, CA, DE — basically any country where eBay is more stable — and you run their account for them. You handle the listings, orders, customer service, the whole thing. Then you just split the profit 50/50.
+Once you know how to make $1K–$3K/month profit from one account, just repeat the same system on another person’s account. I personally started with family. Then friends. Now I do this full-time with clients.
+________________
+
+
+Why is this method useful?
+Because opening eBay accounts — especially from countries like Pakistan, India, or Bangladesh — is risky. Accounts get suspended all the time. But first-world country accounts? Way stronger. eBay trusts them more.
+So instead of fighting the account creation battle, just have someone you know set up AnyDesk or TeamViewer on their computer. You remote in and run everything from there. No need to share passwords. You stay in control, and they get paid passively. It’s clean.
+You can charge bi-weekly or monthly based on profit — whatever works for both sides.
+________________
+
+
+When should you start doing this?
+Only after you’ve gone from 0 to 1. Learn how to make real profit from your first store. Once that’s dialed in, then scale it to 5 or 10 accounts using the agency model.
+But don’t try to skip ahead. You need that first win before anything else.
+
+
+  
+
+
+
+
+
+Chapter 20: Your Daily Routine (Checklist Included)
+If you’ve made it this far, you already know the system works.
+But what actually builds momentum isn’t knowing—it’s doing. Every single day.
+eBay rewards activity. The sellers who get daily sales aren’t always the smartest or the most experienced—they’re just the most consistent. The algorithm favors sellers who show up, list, fulfill orders fast, and stay active.
+This daily checklist is exactly what I follow, and what I give to every VA once they're trained. Whether you’re just starting or managing multiple stores, this routine keeps the business growing and protected.
+________________
+
+
+Daily Routine Checklist
+Optimizations to Increase Sales
+                                                                                                                           * Send offers to watchers
+                                                                                                                           * Accept all profitable offers
+                                                                                                                           * Create a new 24-hour markdown sale
+                                                                                                                           * Make sure your 5% coupon is still running
+
+If you’re in your second month or later:
+                                                                                                                              * Use “End & Sell Similar” on older listings that didn’t sell
+(Only do this if items have been live for 30+ days. No point refreshing fresh listings.)
+
+________________
+
+
+Orders
+                                                                                                                                 * Fulfill all new orders promptly
+
+________________
+
+
+Customer Service & Account Health
+                                                                                                                                    * Respond to all buyer messages
+                                                                                                                                    * Check and resolve return requests
+                                                                                                                                    * Check “Item Not Received” cases
+                                                                                                                                    * Resolve negative feedback
+
+________________
+
+
+Listing
+If you’re under 10,000 items:
+                                                                                                                                       * List 100 new items per day using bulk
+                                                                                                                                       * List 10 product substitutions per day
+
+If you’ve reached 10,000 items:
+                                                                                                                                          * Delete 100 items per day that haven’t sold
+                                                                                                                                          * List 100 fresh replacements
+                                                                                                                                          * Continue with 10 product substitutions for high-margin items
+
+________________
+
+
+Once you hit 10,000 listings, you don’t stop. You start pruning. Every day, delete the worst-performing 100 items and replace them with 100 new ones. That keeps your catalog alive and constantly tuned to what’s working.
+Think of this checklist as your engine. You don’t need to be perfect—you just need to keep it running. Day by day, the momentum builds, and that’s when you start seeing stable, daily sales.
+Stick to this. Nothing else matters more.
