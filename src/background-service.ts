@@ -540,6 +540,137 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         }
       }
 
+      if (msgType === 'TITLE_BUILDER_COMPETITOR_STEAL') {
+        try {
+          const { keyword } = message.payload as { keyword: string };
+          const searchUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(keyword)}&LH_Complete=1&LH_Sold=1&_sop=13&_ipg=20`;
+          const tab = await chrome.tabs.create({ url: searchUrl, active: false });
+          await new Promise<void>(resolve => {
+            const listener = (tabId: number, info: chrome.tabs.TabChangeInfo) => {
+              if (tabId === tab.id && info.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+                setTimeout(resolve, 1500);
+              }
+            };
+            chrome.tabs.onUpdated.addListener(listener);
+          });
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id! },
+            func: () => {
+              const items = [...document.querySelectorAll('.s-item__title')];
+              return items
+                .map(el => el.textContent?.trim())
+                .filter(Boolean)
+                .filter(t => t !== 'Shop on eBay')
+                .slice(0, 20) as string[];
+            }
+          });
+          await chrome.tabs.remove(tab.id!);
+          const titles: string[] = results[0]?.result || [];
+          const wordFreq: Record<string, number> = {};
+          const stopWords = new Set(['the','a','an','and','or','for','with','in','on','at','to','of','is','are','was','be','by','from','new','used']);
+          titles.forEach(title => {
+            title.toLowerCase().split(/\s+/).forEach(word => {
+              const clean = word.replace(/[^a-z0-9]/g, '');
+              if (clean.length > 2 && !stopWords.has(clean)) {
+                wordFreq[clean] = (wordFreq[clean] || 0) + 1;
+              }
+            });
+          });
+          const topKeywords = Object.entries(wordFreq)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 15)
+            .map(([word, count]) => ({ word, count }));
+          return { ok: true, titles: titles.slice(0, 5), keywords: topKeywords, suggestedTitle: titles[0] || '' };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'TITLE_BUILDER_GENERATE') {
+        try {
+          const { prompt, model, useLocal } = message.payload as { prompt: string; model?: string; useLocal?: boolean };
+          if (useLocal) {
+            try {
+              const controller = new AbortController();
+              setTimeout(() => controller.abort(), 8000);
+              const res = await fetch('http://localhost:11434/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: model || 'qwen2.5-coder:7b', prompt, stream: false }),
+                signal: controller.signal
+              });
+              if (res.ok) {
+                const data = await res.json();
+                const title = (data.response || '').trim()
+                  .replace(/^["'\n]+|["'\n]+$/g, '')
+                  .split('\n')[0]
+                  .slice(0, 80);
+                if (title) return { title, model: model || 'qwen2.5-coder:7b', source: 'LOCAL' };
+              }
+            } catch { /* fall through to cloud */ }
+          }
+          const apiKeyResult = await chrome.storage.local.get('syndrax_api_key');
+          const apiKey: string = apiKeyResult.syndrax_api_key || '';
+          if (!apiKey) return { title: '', source: 'ERROR', error: 'No API key' };
+          const cloudModel = model?.includes('deepseek') ? model : 'claude-haiku-4-5-20251001';
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: cloudModel, max_tokens: 150, messages: [{ role: 'user', content: prompt }] })
+          });
+          const data = await res.json();
+          const title = (data.content?.[0]?.text || '').trim()
+            .replace(/^["'\n]+|["'\n]+$/g, '')
+            .split('\n')[0]
+            .slice(0, 80);
+          return { title, model: cloudModel, source: 'CLOUD' };
+        } catch (e) {
+          return { title: '', source: 'ERROR', error: String(e) };
+        }
+      }
+
+      if (msgType === 'TITLE_BUILDER_REMIX') {
+        try {
+          const { competitorTitle, brand } = message.payload as { competitorTitle: string; brand?: string };
+          const apiKeyResult = await chrome.storage.local.get('syndrax_api_key');
+          const apiKey: string = apiKeyResult.syndrax_api_key || '';
+          if (!apiKey) return { title: '', source: 'ERROR', error: 'No API key' };
+          const prompt = `Remix this eBay title to create a better version.
+Original: "${competitorTitle}"
+Brand hint: "${brand || 'unknown'}"
+
+Rules:
+- Keep all important keywords
+- Reorder words for better SEO
+- Remove filler words (new, the, a, an, for, with)
+- Put the most important keyword first
+- Stay under 80 characters
+- Return ONLY the new title, nothing else`;
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
+          });
+          const data = await res.json();
+          const title = (data.content?.[0]?.text || '').trim()
+            .replace(/^["'\n]+|["'\n]+$/g, '')
+            .slice(0, 80);
+          return { title, source: 'CLOUD' };
+        } catch (e) {
+          return { title: '', source: 'ERROR', error: String(e) };
+        }
+      }
+
+      if (msgType === 'OPEN_TITLE_BUILDER') {
+        try {
+          await chrome.storage.local.set({ titlebuilder_prefill: message.payload });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }

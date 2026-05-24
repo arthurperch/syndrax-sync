@@ -363,8 +363,9 @@ function createPanel() {
       <div class="sniper-section" style="position:sticky;bottom:0;background:#02050f;padding-bottom:20px;">
         <button id="sniper-list-btn" class="sniper-btn-primary" style="margin-bottom:10px;">⚡ List on eBay</button>
         <div style="display:flex;gap:8px;">
-          <button id="sniper-research-btn" class="sniper-btn-secondary">🔍 Research Competitors</button>
-          <button id="sniper-scan-btn" class="sniper-btn-secondary">📊 Scan Seller</button>
+          <button id="sniper-research-btn" class="sniper-btn-secondary">🔍 Research</button>
+          <button id="sniper-scan-btn" class="sniper-btn-secondary">📊 Scan</button>
+          <button id="sniper-titlebuilder-btn" class="sniper-btn-secondary">✏️ Title Builder</button>
         </div>
       </div>
     </div>
@@ -406,6 +407,19 @@ function createPanel() {
   // Scan seller button
   panel.querySelector('#sniper-scan-btn')?.addEventListener('click', () => {
     showToast('📊 Scan Seller — Coming soon', false);
+  });
+
+  // Title Builder button
+  panel.querySelector('#sniper-titlebuilder-btn')?.addEventListener('click', () => {
+    chrome.runtime.sendMessage({
+      type: 'OPEN_TITLE_BUILDER',
+      payload: {
+        title: currentData?.title || '',
+        brand: currentData?.brand || '',
+        asin: currentData?.asin || ''
+      }
+    });
+    showToast('✏️ Title Builder ready — open extension popup', false);
   });
 
   // Bullets toggle

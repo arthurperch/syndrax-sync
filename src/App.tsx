@@ -13,8 +13,9 @@ import {
   MoreVertical, Zap, RefreshCw, ExternalLink, ChevronLeft,
   ChevronRight, Play, Pause, Square, Download, Copy,
   CheckCircle, AlertTriangle, XCircle, Loader, Plus,
-  ArrowUpDown, Filter, Eye,
+  ArrowUpDown, Filter, Eye, PenTool,
 } from "lucide-react";
+import TitleBuilder from './pages/TitleBuilder';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -836,12 +837,13 @@ export default function App() {
   const [view, setView] = useState<View>("menu");
 
   const viewMap: Record<string, React.FC<{ onBack: () => void }>> = {
-    dashboard: DashboardView,
-    inventory: InventoryView,
-    seo:       SEOView,
-    finance:   FinanceView,
-    reverse:   CompetitorView,
-    lister:    OrdersView,
+    dashboard:    DashboardView,
+    inventory:    InventoryView,
+    seo:          SEOView,
+    finance:      FinanceView,
+    reverse:      CompetitorView,
+    lister:       OrdersView,
+    titlebuilder: TitleBuilder,
   };
 
   const renderDetail = () => {

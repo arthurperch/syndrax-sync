@@ -60,7 +60,7 @@
       "js": [
         "assets/amazon-price-checker.ts-09266909.js",
         "assets/amazon-scraper.ts-cb9e63c1.js",
-        "assets/sniper-overlay.ts-b8f749fc.js"
+        "assets/sniper-overlay.ts-3877ee36.js"
       ],
       "matches": [
         "*://*.amazon.com/dp/*",
@@ -70,7 +70,7 @@
     },
     {
       "js": [
-        "assets/sniper-overlay.ts-b8f749fc.js"
+        "assets/sniper-overlay.ts-3877ee36.js"
       ],
       "matches": [
         "https://www.amazon.co.uk/dp/*",
@@ -214,7 +214,7 @@
       "resources": [
         "assets/amazon-price-checker.ts-09266909.js",
         "assets/amazon-scraper.ts-cb9e63c1.js",
-        "assets/sniper-overlay.ts-b8f749fc.js"
+        "assets/sniper-overlay.ts-3877ee36.js"
       ],
       "use_dynamic_url": false
     },
