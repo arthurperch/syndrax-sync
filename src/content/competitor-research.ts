@@ -90,9 +90,11 @@ function createScanOverlay() {
     
     const items = scanCompetitorListings();
     
+    const titles = items.map(i => i.title);
     chrome.runtime.sendMessage({
       type: 'COMPETITORS_SCANNED',
       payload: items,
+      titles,
       timestamp: Date.now()
     });
     

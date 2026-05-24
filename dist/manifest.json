@@ -137,7 +137,7 @@
     },
     {
       "js": [
-        "assets/competitor-research.ts-31764ce4.js"
+        "assets/competitor-research.ts-e97e1858.js"
       ],
       "matches": [
         "*://*.ebay.com/sch/*"
@@ -198,7 +198,7 @@
         "assets/ebay-mesh-order-overlay.ts-84ff6aac.js",
         "assets/listing-optimizer.ts-4ed993c7.js",
         "assets/customer-message-tool.ts-4ed993c7.js",
-        "assets/competitor-research.ts-31764ce4.js"
+        "assets/competitor-research.ts-e97e1858.js"
       ],
       "use_dynamic_url": false
     },
