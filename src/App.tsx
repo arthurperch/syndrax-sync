@@ -13,10 +13,11 @@ import {
   MoreVertical, Zap, RefreshCw, ExternalLink, ChevronLeft,
   ChevronRight, Play, Pause, Square, Download, Copy,
   CheckCircle, AlertTriangle, XCircle, Loader, Plus,
-  ArrowUpDown, Filter, Eye, PenTool, MessageSquare,
+  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users,
 } from "lucide-react";
 import TitleBuilder from './pages/TitleBuilder';
 import DescriptionBuilder from './components/DescriptionBuilder';
+import { AccountManager } from './pages/AccountManager';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -127,7 +128,8 @@ const pipeline = [
   { id: "07", key: "lister",       title: "Bulk Lister",       phase: "Phase 6",   icon: UploadCloud,  t: "pink"   as Tone, desc: "eBay listings in bulk • pricing • markup • margin calculations" },
   { id: "07.5", key: "optimizer",  title: "Listing Optimizer", phase: "Phase 6B",  icon: RefreshCw,    t: "cyan"   as Tone, desc: "90-day lifecycle · End & Sell Similar · price reduction · delete queue" },
   { id: "08.5", key: "messages",   title: "Message Tool",      phase: "Phase 7B",  icon: MessageSquare, t: "blue"  as Tone, desc: "5 buyer templates · OOS · shipping · returns · one-click copy" },
-  { id: "08", key: "dashboard",    title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
+  { id: "08", key: "accounts",     title: "Account Manager",   phase: "Phase 7",   icon: Users,        t: "cyan"   as Tone, desc: "eBay account tiers • warmup mode • daily limits • risk tracking" },
+  { id: "08.1", key: "dashboard",  title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
   { id: "09", key: "finance",      title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "10", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
 ];
@@ -848,6 +850,7 @@ export default function App() {
     reverse:      CompetitorView,
     titlebuilder: TitleBuilder,
     description:  ({ onBack }) => <DescriptionBuilder mode="popup" onBack={onBack} />,
+    accounts:     ({ onBack }) => <AccountManager onBack={onBack} />,
   };
 
   const renderDetail = () => {
