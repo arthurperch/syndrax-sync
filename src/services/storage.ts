@@ -25,6 +25,7 @@ export interface Order {
   sourcePlatform: 'amazon' | 'aliexpress';
   status: 'pending' | 'in_progress' | 'complete' | 'failed';
   trackingNumber?: string;
+  carrier?: string;
   createdAt: number;
   updatedAt: number;
 }

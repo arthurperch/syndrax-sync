@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { storage, type Order, type InventoryItem, type Settings, type OrderIntelligence } from '../services/storage';
 import { analyzeOrder } from '../services/order-intelligence';
+import { getTrackCaptainKey, claimTrackingNumber } from '../services/trackcaptain';
 
 export default function OrderFulfillment() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [intelligenceMap, setIntelligenceMap] = useState<Map<string, OrderIntelligence>>(new Map());
+  const [trackingLoading, setTrackingLoading] = useState<Map<string, boolean>>(new Map());
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     loadAll();
@@ -18,6 +21,11 @@ export default function OrderFulfillment() {
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
   }, []);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }
 
   async function loadAll() {
     const [allOrders, inventory, settings] = await Promise.all([
@@ -114,6 +122,57 @@ export default function OrderFulfillment() {
     await storage.addActivity('Address copied to clipboard', 'success');
   }
 
+  async function handleGetTracking(order: Order) {
+    // Get API key
+    const apiKey = await getTrackCaptainKey();
+    if (!apiKey) {
+      alert('Add TrackCaptain API key in Settings');
+      return;
+    }
+
+    // Mark loading for this order
+    setTrackingLoading(prev => new Map(prev).set(order.id, true));
+
+    try {
+      // Calculate delivery date
+      const today = new Date();
+      const daysToAdd = order.sourcePlatform === 'aliexpress' ? 21 : 5;
+      today.setDate(today.getDate() + daysToAdd);
+      const deliveryDate = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      const result = await claimTrackingNumber(apiKey, {
+        city: order.buyerCity,
+        state: order.buyerState,
+        zip: order.buyerZip,
+        country: 'US',
+        deliveryDate
+      });
+
+      if ('error' in result) {
+        showToast(`❌ ${result.error}`);
+        await storage.addActivity(`Tracking claim failed for order ${order.id}: ${result.error}`, 'error');
+      } else {
+        // Save tracking number and carrier to order
+        const updatedOrder: Order = {
+          ...order,
+          trackingNumber: result.trackingNumber,
+          carrier: result.carrier,
+          updatedAt: Date.now()
+        };
+        await storage.saveOrder(updatedOrder);
+        showToast(`✅ Tracking claimed: ${result.carrier} ${result.trackingNumber}`);
+        await storage.addActivity(`Tracking claimed for order ${order.id}: ${result.carrier} ${result.trackingNumber}`, 'success');
+        await loadOrders();
+      }
+    } finally {
+      setTrackingLoading(prev => {
+        const next = new Map(prev);
+        next.delete(order.id);
+        return next;
+      });
+    }
+  }
+
   function getStatusBadge(status: Order['status']) {
     switch (status) {
       case 'pending': return <span className="badge badge-warning">Pending</span>;
@@ -121,6 +180,30 @@ export default function OrderFulfillment() {
       case 'complete': return <span className="badge badge-success">Complete</span>;
       case 'failed': return <span className="badge badge-error">Failed</span>;
     }
+  }
+
+  function renderTrackingBadge(order: Order) {
+    if (!order.trackingNumber) return null;
+    const tn = order.trackingNumber;
+    const last4 = tn.slice(-4);
+    const carrierPrefix = order.carrier ? order.carrier.substring(0, 5).toUpperCase() : '📦';
+    return (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: 11,
+        padding: '3px 8px',
+        borderRadius: 4,
+        background: 'rgba(6,78,59,0.35)',
+        border: '1px solid rgba(52,211,153,0.4)',
+        color: '#6ee7b7',
+        fontWeight: 600,
+        letterSpacing: '0.02em'
+      }}>
+        📦 {carrierPrefix} ••••{last4}
+      </span>
+    );
   }
 
   function renderIntelligenceBanner(intel: OrderIntelligence) {
@@ -182,6 +265,27 @@ export default function OrderFulfillment() {
 
   return (
     <div>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#1e293b',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 8,
+          padding: '10px 18px',
+          fontSize: 13,
+          color: 'var(--white)',
+          zIndex: 9999,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          whiteSpace: 'nowrap'
+        }}>
+          {toast}
+        </div>
+      )}
+
       <div className="page-header">
         <h2>Order Fulfillment</h2>
         <p>Manage and fulfill your eBay orders</p>
@@ -197,6 +301,9 @@ export default function OrderFulfillment() {
       ) : (
         orders.map(order => {
           const intel = intelligenceMap.get(order.id);
+          const isTrackingLoading = trackingLoading.get(order.id) ?? false;
+          const showGetTracking = order.status === 'complete' && !order.trackingNumber;
+
           return (
             <div key={order.id} className="order-card">
               <div className="order-header">
@@ -208,6 +315,13 @@ export default function OrderFulfillment() {
                 <div>💵 ${order.salePrice.toFixed(2)} × {order.quantity}</div>
                 <div>📍 {order.buyerCity}, {order.buyerState}</div>
               </div>
+
+              {/* Tracking badge */}
+              {order.trackingNumber && (
+                <div style={{ marginBottom: 8 }}>
+                  {renderTrackingBadge(order)}
+                </div>
+              )}
 
               {intel && renderIntelligenceBanner(intel)}
 
@@ -241,6 +355,16 @@ export default function OrderFulfillment() {
                     disabled={loading}
                   >
                     ✓ Done
+                  </button>
+                )}
+                {showGetTracking && (
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={() => handleGetTracking(order)}
+                    disabled={isTrackingLoading}
+                    style={{ borderColor: 'rgba(52,211,153,0.4)', color: '#6ee7b7' }}
+                  >
+                    {isTrackingLoading ? '⏳ Claiming...' : '📦 Get Tracking'}
                   </button>
                 )}
               </div>

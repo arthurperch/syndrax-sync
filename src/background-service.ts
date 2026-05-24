@@ -1,6 +1,7 @@
 import { storage, type InventoryItem } from './services/storage';
 import type { Message } from './services/messaging';
 import { discord, sendDailySummaryWebhook } from './services/discord-logger';
+import { claimTrackingNumber, type ClaimParams } from './services/trackcaptain';
 
 // Helper to get next midnight timestamp
 function getNextMidnight(): number {
@@ -441,6 +442,13 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         // Content script on eBay sold page is ready
         console.log('💼 Finance scanner ready on:', message.payload);
         return { success: true };
+      }
+
+      // ===== TRACKCAPTAIN: CLAIM TRACKING NUMBER =====
+      if (msgType === 'CLAIM_TRACKING_NUMBER') {
+        const { apiKey, params } = message.payload as { apiKey: string; params: ClaimParams };
+        const result = await claimTrackingNumber(apiKey, params);
+        return { success: true, result };
       }
       
       return { success: false, error: 'Unknown message type' };

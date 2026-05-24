@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { storage, type Settings as SettingsType } from '../services/storage';
 import { validateApiKey } from '../services/ai';
+import { getTrackCaptainKey, saveTrackCaptainKey, getAccountBalance } from '../services/trackcaptain';
 
 export default function Settings() {
   const [settings, setSettings] = useState<SettingsType>({
@@ -19,6 +20,11 @@ export default function Settings() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
 
+  // TrackCaptain state
+  const [tcKey, setTcKey] = useState('');
+  const [tcTesting, setTcTesting] = useState(false);
+  const [tcTestResult, setTcTestResult] = useState<{ credits: number } | 'error' | null>(null);
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -28,6 +34,8 @@ export default function Settings() {
     setSettings(stored);
     const key = await storage.getApiKey();
     if (key) setApiKey(key);
+    const tck = await getTrackCaptainKey();
+    if (tck) setTcKey(tck);
   }
 
   async function handleSave() {
@@ -35,6 +43,9 @@ export default function Settings() {
     await storage.saveSettings(settings);
     if (apiKey.trim()) {
       await storage.saveApiKey(apiKey);
+    }
+    if (tcKey.trim()) {
+      await saveTrackCaptainKey(tcKey);
     }
     await storage.addActivity('Settings saved', 'success');
     setSaving(false);
@@ -45,20 +56,34 @@ export default function Settings() {
       setTestResult('error');
       return;
     }
-    
     setTesting(true);
     setTestResult(null);
-    
     const isValid = await validateApiKey(apiKey);
     setTestResult(isValid ? 'success' : 'error');
-    
     if (isValid) {
       await storage.addActivity('API key validated successfully', 'success');
     } else {
       await storage.addActivity('API key validation failed', 'error');
     }
-    
     setTesting(false);
+  }
+
+  async function handleTestTrackCaptain() {
+    if (!tcKey.trim()) {
+      setTcTestResult('error');
+      return;
+    }
+    setTcTesting(true);
+    setTcTestResult(null);
+    const result = await getAccountBalance(tcKey);
+    if (result) {
+      setTcTestResult(result);
+      await storage.addActivity(`TrackCaptain connected: ${result.credits} credits`, 'success');
+    } else {
+      setTcTestResult('error');
+      await storage.addActivity('TrackCaptain connection failed', 'error');
+    }
+    setTcTesting(false);
   }
 
   async function handleClearData() {
@@ -128,9 +153,10 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* AI Integration */}
       <div className="card">
         <h3 style={{ fontSize: 13, marginBottom: 12, color: 'var(--white)' }}>AI Integration</h3>
-        
+
         <div className="form-group">
           <label>Anthropic API Key</label>
           <input
@@ -143,8 +169,8 @@ export default function Settings() {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <button 
-            className="btn btn-outline" 
+          <button
+            className="btn btn-outline"
             onClick={handleTestConnection}
             disabled={testing || !apiKey.trim()}
           >
@@ -159,6 +185,44 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Order Tracking */}
+      <div className="card">
+        <h3 style={{ fontSize: 13, marginBottom: 12, color: 'var(--white)' }}>Order Tracking</h3>
+        <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>
+          Claim tracking numbers via TrackCaptain API
+        </p>
+
+        <div className="form-group">
+          <label>TrackCaptain API Key</label>
+          <input
+            type="password"
+            className="input"
+            placeholder="tc_live_..."
+            value={tcKey}
+            onChange={e => setTcKey(e.target.value)}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-outline"
+            onClick={handleTestTrackCaptain}
+            disabled={tcTesting || !tcKey.trim()}
+          >
+            {tcTesting ? 'Testing...' : '🔌 Test Connection'}
+          </button>
+          {tcTestResult !== null && tcTestResult !== 'error' && (
+            <span className="badge badge-success" style={{ alignSelf: 'center' }}>
+              ✓ {(tcTestResult as { credits: number }).credits} credits
+            </span>
+          )}
+          {tcTestResult === 'error' && (
+            <span className="badge badge-error" style={{ alignSelf: 'center' }}>✗ Connection failed</span>
+          )}
+        </div>
+      </div>
+
+      {/* Advanced */}
       <div className="card">
         <h3 style={{ fontSize: 13, marginBottom: 12, color: 'var(--white)' }}>Advanced</h3>
         <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>Enable or disable vendor integrations</p>
@@ -334,8 +398,8 @@ export default function Settings() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        <button 
-          className="btn btn-gradient" 
+        <button
+          className="btn btn-gradient"
           onClick={handleSave}
           disabled={saving}
           style={{ flex: 1 }}
@@ -345,8 +409,8 @@ export default function Settings() {
       </div>
 
       <div style={{ marginTop: 20 }}>
-        <button 
-          className="btn btn-danger" 
+        <button
+          className="btn btn-danger"
           onClick={handleClearData}
           style={{ width: '100%' }}
         >
