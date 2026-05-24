@@ -5,13 +5,35 @@ import { retryFetch } from './retry';
 const MAX_ARRAY_SIZE = 1000;
 
 const webhookNames: Record<WebhookChannel, string> = {
-  logs:           'Syndrax Sync',
-  errors:         'Syndrax Alert System',
-  priceUpdates:   'Syndrax PriceBot',
-  outOfStock:     'Syndrax StockBot',
-  variantAlerts:  'Syndrax VariantBot',
-  fingerprintLog: 'Syndrax Fingerprint',
-  dailySummary:   'Syndrax Daily Report'
+  welcome:              'Syndrax Sync',
+  agentStatus:          'Syndrax Sync',
+  changelog:            'Syndrax Sync',
+  buildFailures:        'Syndrax Sync',
+  veroBlocked:          'Syndrax Sync',
+  marginAlerts:         'Syndrax Sync',
+  accountAlerts:        'Syndrax Sync',
+  researchUpdates:      'Syndrax Sync',
+  listingCreated:       'Syndrax Sync',
+  priceUpdates:         'Syndrax Sync',
+  stockAlerts:          'Syndrax Sync',
+  dailySummary:         'Syndrax Sync',
+  orderFulfilled:       'Syndrax Sync',
+  financeReconciliation:'Syndrax Sync',
+  performanceScores:    'Syndrax Sync',
+  clineUpdates:         'Syndrax Sync',
+  hermesTasks:          'Syndrax Sync',
+  hermesFindings:       'Syndrax Sync',
+  buildMonitor:         'Syndrax Sync',
+  debugResearch:        'Syndrax Sync',
+  debugMatching:        'Syndrax Sync',
+  debugListing:         'Syndrax Sync',
+  debugFulfillment:     'Syndrax Sync',
+  competitorAnalysis:   'Syndrax Sync',
+  seoReports:           'Syndrax Sync',
+  inventoryHealth:      'Syndrax Sync',
+  warmupTracker:        'Syndrax Sync',
+  hermesCommands:       'Syndrax Sync',
+  clineCommands:        'Syndrax Sync'
 };
 
 // Get human-readable time
@@ -1164,7 +1186,7 @@ export const discord = {
     const color = compliance.passed ? 0x00FF88 : 0xFF8C00;
     const status = compliance.passed ? '✅ APPROVED' : '⚠️ FLAGGED';
     
-    return sendWebhook('researchUpdates', {
+    return sendWebhook('logs', {
       title: `${status} - ${product.title.substring(0, 60)}`,
       description: `Research pipeline result for Amazon product`,
       color,
