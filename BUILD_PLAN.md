@@ -14,13 +14,19 @@ This document contains the complete development roadmap for Syndrax Sync, organi
 |--------|------|--------|----------|
 | Sprint 0 | Foundation | ✅ DONE | 100% |
 | Sprint 1 | Critical Fixes | ✅ DONE | 100% |
-| Sprint 2 | Core Bugs | 🔄 CURRENT | 25% |
-| Sprint 3 | Finance & Export | ⏳ PENDING | 0% |
-| Sprint 4 | Stability | ⏳ PENDING | 0% |
-| Sprint 5 | New Features | ⏳ PENDING | 0% |
-| Sprint 6 | EcomFlow Port | ⏳ PENDING | 0% |
-| Sprint 7 | Strategy Dashboard | ⏳ PENDING | 0% |
+| Sprint 2 | Core Bugs | ✅ DONE | 100% |
+| Sprint 3 | Finance & Export | ✅ DONE | 100% |
+| Sprint 4 | Stability | ✅ DONE | 100% |
+| Sprint 5 | New Features | ✅ DONE | 100% |
+| Sprint 6 | EcomFlow Port | ✅ DONE | 100% |
+| Sprint 7 | Strategy Dashboard | ✅ DONE | 100% |
 | Sprint 8 | Inventory Engine | ⏳ PENDING | 0% |
+| Session R | Image Pipeline | ⏳ PENDING | 0% |
+| Session S | Pricing Strategy Dashboard | ⏳ PENDING | 0% |
+| Session T | 90-Day Inventory Lifecycle | ⏳ PENDING | 0% |
+| Session U | Test Suite | ⏳ PENDING | 0% |
+| Session V | Bug Panel | ⏳ PENDING | 0% |
+| Session W | Hermes Tests | ⏳ PENDING | 0% |
 
 ---
 
@@ -148,7 +154,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 ---
 
-## Sprint 2: Core Bugs 🔄 CURRENT
+## Sprint 2: Core Bugs ✅ DONE
 
 ### Goals
 - Fix daily sync memory issues
@@ -1227,6 +1233,6 @@ What actually happens.
 
 ---
 
-*Last Updated: 2024*
-*Version: 1.0*
-*Current Sprint: Sprint 2*
+*Last Updated: May 2026*
+*Version: 2.0*
+*Current Sprint: Session R (next up)*

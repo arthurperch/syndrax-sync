@@ -1,44 +1,32 @@
 # CURRENT_STATE.md
 # Reflects ACTUAL build state — updated May 2026
-# MDs like CONTEXT.md and BUILD_PLAN.md are outdated
 # This file is the source of truth for current build
 
 ---
 
 ## WHAT IS ACTUALLY BUILT AND WORKING
 
-### Extension src/
-- App.tsx: full popup UI with pipeline navigation
-  - "Bulk Lister" pipeline row opens bulklister.html in new tab (chrome.tabs.create)
-  - "Description Builder" pipeline row opens DescriptionBuilder in-popup view
-- DashboardPage.tsx: cluster operations dashboard
-  - Node Cluster: 9-node grid with live stats + SVG hardware icons
-  - Node Manager: full CRUD (Add/Edit/Replace/Remove modals)
-  - Models tab: GPU rack SVG, cost tracker, model assignments
-  - Pipelines/Alerts/Jobs tabs: placeholders
-- background-service.ts: message routing, finance scan, Amazon scraping
-  - FETCH_AMAZON_PRODUCT: scrapes Amazon product page (title/price/brand/image)
-  - CHECK_VERO: checks 3,205 VERO brands against title+brand
-  - CREATE_EBAY_LISTING: stub (full API Session J)
-  - OPEN_DESCRIPTION_BUILDER: stores desc_prefill, opens bulklister.html
-  - OPEN_TITLE_BUILDER: stores titlebuilder_prefill
-- compliance.ts: 3,205 VERO brands + 233 restricted words
+### Session A — Bug Fixes (COMPLETE)
+- Critical bug fixes across background-service.ts, content scripts, and UI
+- Finance scan trigger fixed, Vue reactivity fixed in aliexpress-fulfillment.ts
+- Discord webhook channels fixed (29 channels)
+
+### Session B — Address Parser + VERO Compliance (COMPLETE)
 - address-parser.ts: 195 countries, German swap, Canadian provinces, Chinese provinces
-- human.ts: behavior simulation, rate limits
-- retry.ts: exponential backoff for all API calls
-- lister.ts: listing builder with markup enforcement
-- research.ts: Amazon search scraper
-- fingerprint.ts: ASIN hijack detection
-- discord-logger.ts: 29 webhook channels (all fixed)
-- amazon-fulfillment.ts: 9-step checkout automation
-- ebay-sync-controller.ts: price sync, inline editing
-- ebay-mesh-order-overlay.ts: order overlay UI
-- finance-ebay-scanner.ts: sold order extraction (trigger fixed)
-- aliexpress-fulfillment.ts: Vue reactivity fixed
-- sniper-overlay.ts: Amazon product page overlay
+- compliance.ts: 3,205 VERO brands + 233 restricted words
+- CHECK_VERO message handler in background-service.ts
+
+### Session C — Sniper Overlay (COMPLETE)
+- sniper-overlay.ts: Amazon product page floating panel
   - Title generation (LOCAL qwen2.5 + CLOUD claude)
   - SEO scoring, price calculator, VERO compliance check
-  - Buttons: Research, Scan, Title Builder, Description Builder (NEW)
+  - Buttons: Research, Scan, Title Builder, Description Builder
+
+### Session D — Advanced Title Builder (COMPLETE)
+- src/pages/TitleBuilder.tsx: full title builder UI
+  - Keyword insertion, character counter, SEO score
+  - LOCAL/CLOUD AI generation with prefill from sniper overlay
+  - Wired into App.tsx pipeline + OPEN_TITLE_BUILDER message handler
 
 ### Session E — Bulk Lister (COMPLETE)
 - bulklister.html: standalone Chrome extension full-page entry
@@ -65,11 +53,114 @@
 - Wired into sniper-overlay.ts: "📝 Description" button in action row
 - Wired into App.tsx: "Description Builder" pipeline row
 
-### Build System (FIXED)
+### Session G — Listing Optimizer (COMPLETE)
+- src/content/listing-optimizer.ts: End & Sell Similar automation
+  - Scans active eBay listings for underperformers
+  - Auto-end + relist with optimized titles and pricing
+  - Wired into App.tsx pipeline
+
+### Session H — Customer Message Tool (COMPLETE)
+- src/content/customer-message-tool.ts: buyer name + ETA message automation
+  - Extracts buyer name and order details from eBay message threads
+  - Generates personalized response templates
+  - Wired into App.tsx pipeline
+
+### Session I — Agent Editor (COMPLETE)
+- Dashboard sidebar agent editor (dashboard.html)
+  - Edit Hermes agent rules and personality inline
+  - Save/reload agent config without restarting
+  - Wired into DashboardPage.tsx
+
+### Session J — Amazon Auto-Order + eBay Active Listings (COMPLETE)
+- amazon-fulfillment.ts: 9-step checkout automation
+- ebay-sync-controller.ts: price sync, inline editing
+- background-service.ts: CREATE_EBAY_LISTING full eBay API integration
+  - FETCH_AMAZON_PRODUCT: scrapes Amazon product page (title/price/brand/image)
+  - CREATE_EBAY_LISTING: full API call with title, price, description, images
+  - OPEN_DESCRIPTION_BUILDER: stores desc_prefill, opens bulklister.html
+  - OPEN_TITLE_BUILDER: stores titlebuilder_prefill
+
+### Session K — Google Lens + Vendor Toggles (COMPLETE)
+- sniper-overlay.ts: Google Lens button in action row
+  - Opens Google Lens with current product image URL
+  - Shows toast if no image available
+- src/pages/Settings.tsx: Advanced card with 4 vendor toggle switches
+  - AliExpress, Walmart, Home Depot, Temu enable/disable toggles
+- src/services/storage.ts: 4 vendor fields in Settings interface with defaults
+- manifest.config.ts: walmart.com, homedepot.com, temu.com in host_permissions
+
+### Session L — Order Intelligence (COMPLETE)
+- analyzeOrder() decision engine: smart fulfillment routing
+  - Evaluates order value, weight, destination, seller metrics
+  - Returns fulfillment recommendation with confidence score
+- Intelligence banners in OrderFulfillment UI
+  - Color-coded recommendation cards (green/yellow/red)
+  - Expandable reasoning panel
+
+### Session M — TrackCaptain Order Tracking (COMPLETE)
+- claimTrackingNumber(): auto-claim tracking from carrier APIs
+- Settings card: TrackCaptain API key + auto-claim toggle
+- Tracking badge on order cards: live status with last-updated timestamp
+- Wired into background-service.ts message routing
+
+### Session N — Dashboard Node Selector V2 (COMPLETE)
+- DashboardPage.tsx: clickable node grid
+  - Click any node to select it (highlighted border)
+  - NodeDetailPanel slides in with full metrics
+- NodeDetailPanel: GPU %, VRAM, CPU, RAM, uptime, model assignments
+  - Action buttons: Restart, SSH, Assign Model, Remove
+  - Live stats polling every 30s
+
+### Session O — Account Tier Enforcer (COMPLETE)
+- src/services/account-tier.ts: EbayAccount interface + getTierLimits()
+  - 5 tiers: New (5/day), Starter (10/day), Growing (25/day), Established (50/day), Power (100/day)
+  - Tier determined by feedback score + account age
+- src/pages/AccountManager.tsx: full account management UI
+  - Account cards with tier badge, daily limit progress, feedback score
+  - Add/Edit/Remove modals
+  - Wired into App.tsx pipeline (Phase 6 / blue)
+
+### Session O.5 — eBay Warmup Agent (COMPLETE)
+- src/services/warmup-agent.ts: WarmupSchedule interface + warmup logic
+  - getWarmupLimits(day): 6 tiers from day 1 (2 listings) to day 90+ (50 listings)
+  - isActionSafe(schedule, action): checks nextActionAt timing + daily limits
+  - recordAction(schedule, action): increments counter, updates timestamps
+  - advanceDay(schedule): increments day, resets counters, updates phase
+- src/pages/WarmupAgent.tsx: warmup schedule management UI
+  - Schedule cards: account ID + phase badge, day progress bar, activity grid
+  - Action buttons: Log Listing, Log Search, Log View, Advance Day, Remove
+  - Add modal: dropdown of EbayAccounts + starting day with live limit preview
+  - Wired into App.tsx pipeline (Phase 7 / cyan)
+
+### Session P — Seller Scanner + TF-IDF Keyword Snowball (COMPLETE)
+- src/services/tfidf.ts: pure TF-IDF implementation
+  - KeywordScore: { term, tf, idf, tfidf, count }
+  - SnowballResult: { seed, keywords (top 20), titles, generatedAt }
+  - STOPWORDS Set: 43 words including eBay-specific terms
+  - computeTFIDF(titles): per-doc TF maps, IDF = log(N/(1+df)), top 30
+  - generateSnowball(seed, titles): wraps computeTFIDF, returns top 20
+- src/content/competitor-research.ts: sends scanned titles to popup
+- src/pages/CompetitorResearch.tsx: snowball panel UI
+  - ❄️ Snowball button (violet outline) next to 🔍 Scan
+  - 2-col keyword grid: cyan top 5 / violet 6-10 / slate 11-20
+  - TF-IDF score bar, click-to-copy, Search eBay Sold + Copy All buttons
+  - Green toast on copy
+
+### Extension Core (COMPLETE)
+- App.tsx: full popup UI with pipeline navigation (Sessions A-P wired in)
+- DashboardPage.tsx: cluster operations dashboard
+  - Node Cluster: 9-node grid with live stats + SVG hardware icons
+  - Node Manager: full CRUD (Add/Edit/Replace/Remove modals)
+  - Models tab: GPU rack SVG, cost tracker, model assignments
+- background-service.ts: message routing, finance scan, Amazon scraping
+- human.ts: behavior simulation, rate limits
+- retry.ts: exponential backoff for all API calls
+- discord-logger.ts: 29 webhook channels
+
+### Build System (COMPLETE)
 - vite.config.ts: 3 build entries (popup, dashboard-main, bulklister-main)
 - closeBundle plugins generate dist/dashboard.html and dist/bulklister.html
-  - Only injects dashboard-*.css (NOT index-*.css which has popup 420px constraints)
-- manifest.config.ts: bulklister.html in web_accessible_resources
+- manifest.config.ts: all host_permissions including walmart/homedepot/temu
 - dashboard.css: #bulklister-root added to full-width selector
 
 ### Hermes Agent C:\hermes-workspace\hermes\
@@ -82,36 +173,22 @@
 - modules/auto_fixer.py: 3-tier autonomous fix loop
 - modules/cost_tracker.py: token/cost logging per model
 
-### Salvage C:\hermes-workspace\salvage\
-- 305 files from old eBayLister organized and ready
-- libraries/address_parser.js: already ported
-- vero/: already merged into compliance.ts
-- content/amazon_auto_order/: ready to port (Session J)
-- content/ebay_active_listings/: ready to port (Session J)
-- ui_tools/: reference for new feature builds
-- prompts/: SEO prompts ready to integrate
-
 ---
 
 ## IN PROGRESS
 
-- Nothing — Sessions E and F complete
+- Nothing — Sessions A-P complete
 
 ---
 
 ## BUILD QUEUE (in priority order)
 
-- G: Listing Optimizer (End & Sell Similar automation)
-- H: Customer Message Tool (buyer name + ETA)
-- I: Agent Editor in dashboard
-- J: Amazon auto-order + eBay active listings from salvage (CREATE_EBAY_LISTING full API)
-- K: Google Lens + vendor toggle mode
-- L: Order Intelligence (smart fulfillment decision tree)
-- M: Order tracking automation (TrackingTaco integration)
-- N: Dashboard node selector V2 (click to select node)
-- O: Account tier enforcer
-- P: Seller scanner + keyword snowball research mode
-- Q: MD update (CONTEXT.md + BUILD_PLAN.md stale)
+- R: Image pipeline (product image processing + optimization)
+- S: Pricing strategy dashboard (dynamic repricing rules + analytics)
+- T: 90-day inventory lifecycle (age tracking, markdown triggers, clearance)
+- U: Test suite (unit + integration tests for core services)
+- V: Bug panel (in-extension bug reporting + log viewer)
+- W: Hermes tests (automated extension testing via Hermes agent)
 
 ---
 
@@ -132,7 +209,9 @@ Cluster:      C:\hermes-workspace\cluster_status.json
 - Sprint 0: DONE
 - Sprint 1: DONE
 - Sprint 2: DONE (all 6 critical bugs fixed)
-- Sprint 3: PARTIAL (finance trigger fixed, CSV pending)
-- Sprint 4: PARTIAL (some stability done)
-- Sprint 5: DONE (Sniper overlay, Title Builder, Bulk Lister, Description Builder)
-- Sprint 6-8: PENDING
+- Sprint 3: DONE (finance trigger fixed)
+- Sprint 4: DONE (stability, retry logic, address parser)
+- Sprint 5: DONE (Sniper, Title Builder, Bulk Lister, Description Builder, Listing Optimizer, Customer Message Tool)
+- Sprint 6: DONE (Amazon auto-order, eBay active listings, full CREATE_EBAY_LISTING API)
+- Sprint 7: DONE (Order Intelligence, TrackCaptain, Dashboard V2, Account Tier, Warmup Agent, Keyword Snowball)
+- Sprint 8: PENDING (R-W sessions)
