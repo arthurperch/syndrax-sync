@@ -13,12 +13,13 @@ import {
   MoreVertical, Zap, RefreshCw, ExternalLink, ChevronLeft,
   ChevronRight, Play, Pause, Square, Download, Copy,
   CheckCircle, AlertTriangle, XCircle, Loader, Plus,
-  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users, TrendingUp,
+  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users, TrendingUp, Image,
 } from "lucide-react";
 import TitleBuilder from './pages/TitleBuilder';
 import DescriptionBuilder from './components/DescriptionBuilder';
 import { AccountManager } from './pages/AccountManager';
 import { WarmupAgent } from './pages/WarmupAgent';
+import ImagePipeline from './pages/ImagePipeline';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -132,7 +133,8 @@ const pipeline = [
   { id: "08", key: "accounts",     title: "Account Manager",   phase: "Phase 7",   icon: Users,        t: "cyan"   as Tone, desc: "eBay account tiers • warmup mode • daily limits • risk tracking" },
   { id: "08.1", key: "dashboard",  title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
   { id: "09", key: "warmup",       title: "Warmup Agent",      phase: "Phase 7",   icon: TrendingUp,   t: "cyan"   as Tone, desc: "eBay account warmup • daily limits • safe listing schedule" },
-  { id: "10", key: "finance",      title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
+  { id: "10", key: "images",       title: "Image Pipeline",    phase: "Phase 8",   icon: Image,        t: "violet" as Tone, desc: "Fetch • resize • optimize • preview product images" },
+  { id: "10.5", key: "finance",    title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "11", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
 ];
 
@@ -854,6 +856,7 @@ export default function App() {
     description:  ({ onBack }) => <DescriptionBuilder mode="popup" onBack={onBack} />,
     accounts:     ({ onBack }) => <AccountManager onBack={onBack} />,
     warmup:       ({ onBack }) => <WarmupAgent onBack={onBack} />,
+    images:       ({ onBack }) => <ImagePipeline onBack={onBack} />,
   };
 
   const renderDetail = () => {

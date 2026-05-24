@@ -453,7 +453,28 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         const result = await claimTrackingNumber(apiKey, params);
         return { success: true, result };
       }
-      
+
+      // ===== IMAGE PIPELINE: FETCH IMAGE (CORS bypass) =====
+      if (msgType === 'FETCH_IMAGE_FOR_PIPELINE') {
+        const { url } = message.payload as { url: string };
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            return { ok: false, error: `HTTP ${response.status}` };
+          }
+          const blob = await response.blob();
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error('FileReader error'));
+            reader.readAsDataURL(blob);
+          });
+          return { ok: true, dataUrl };
+        } catch (err) {
+          return { ok: false, error: String(err) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }
