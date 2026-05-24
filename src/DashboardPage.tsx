@@ -11,7 +11,7 @@ import {
   FileText, Settings, MoreVertical, RefreshCw, Zap, ExternalLink,
   Search, Filter, ChevronLeft, Play, Square, Download, Database,
   Clock, AlertTriangle, CheckCircle, XCircle, Cpu, HardDrive,
-  Wifi, Triangle, Edit, Trash2, Plus, RefreshCcw, X
+  Wifi, Triangle, Edit, Trash2, Plus, RefreshCcw, X, Shield, Lock
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
@@ -67,7 +67,7 @@ interface ClusterStatus {
   nodes: ClusterNode[];
 }
 
-type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'models' | 'jobs';
+type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'models' | 'jobs' | 'admin';
 type StatusFilter = 'all' | 'online' | 'standby' | 'offline';
 
 interface NodeConfig {
@@ -1621,6 +1621,375 @@ function ModelControlView({ data }: { data: ClusterStatus }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ADMIN PANEL COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+async function hashPassword(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function Toggle({ value, onChange, locked }: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+  locked?: boolean;
+}) {
+  return (
+    <button
+      onClick={() => !locked && onChange(!value)}
+      className={`relative w-10 h-5 rounded-full transition-colors ${value ? 'bg-cyan-500' : 'bg-slate-600'} ${locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    </button>
+  );
+}
+
+function AdminToast({ message, type, onDone }: { message: string; type: 'success' | 'error'; onDone: () => void }) {
+  React.useEffect(() => {
+    const t = setTimeout(onDone, 2000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className={`fixed bottom-6 right-6 z-[100] px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all ${type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+      {message}
+    </div>
+  );
+}
+
+function AdminPanel() {
+  const [unlocked, setUnlocked] = React.useState(false);
+  const [storedHash, setStoredHash] = React.useState('');
+  const [pwInput, setPwInput] = React.useState('');
+  const [pwError, setPwError] = React.useState(false);
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Hermes settings
+  const [scanInterval, setScanInterval] = React.useState(600);
+  const [maxTasks, setMaxTasks] = React.useState(4);
+  const [autoPush, setAutoPush] = React.useState(false);
+  const [discordAlerts, setDiscordAlerts] = React.useState(true);
+  const [autoFix, setAutoFix] = React.useState(true);
+
+  // Cluster settings
+  const [subnet, setSubnet] = React.useState('192.168.1');
+  const [scanStart, setScanStart] = React.useState(160);
+  const [scanEnd, setScanEnd] = React.useState(175);
+  const [autoDiscover, setAutoDiscover] = React.useState(true);
+  const [sshTimeout, setSshTimeout] = React.useState(10);
+
+  // Agent rules
+  const [mdAutoUpdate, setMdAutoUpdate] = React.useState(false);
+
+  // Danger zone
+  const [showChangePw, setShowChangePw] = React.useState(false);
+  const [curPw, setCurPw] = React.useState('');
+  const [newPw, setNewPw] = React.useState('');
+  const [confirmPw, setConfirmPw] = React.useState('');
+  const [factoryWarning, setFactoryWarning] = React.useState(false);
+  const [factoryInput, setFactoryInput] = React.useState('');
+
+  const showToast = React.useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  }, []);
+
+  React.useEffect(() => {
+    const init = async () => {
+      const defaultHash = await hashPassword('syndrax2026');
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get(['syndrax_admin_hash', 'hermes_settings', 'hermes_cluster', 'hermes_agent_rules'], (result) => {
+          setStoredHash(result.syndrax_admin_hash || defaultHash);
+          if (result.hermes_settings) {
+            const s = result.hermes_settings;
+            setScanInterval(s.scan_interval ?? 600);
+            setMaxTasks(s.max_concurrent_tasks ?? 4);
+            setAutoPush(s.auto_push_git ?? false);
+            setDiscordAlerts(s.discord_alerts ?? true);
+            setAutoFix(s.auto_fix_selectors ?? true);
+          }
+          if (result.hermes_cluster) {
+            const c = result.hermes_cluster;
+            setSubnet(c.subnet ?? '192.168.1');
+            setScanStart(c.scan_range_start ?? 160);
+            setScanEnd(c.scan_range_end ?? 175);
+            setAutoDiscover(c.auto_discover ?? true);
+            setSshTimeout(c.ssh_timeout ?? 10);
+          }
+          if (result.hermes_agent_rules) {
+            setMdAutoUpdate(result.hermes_agent_rules.md_auto_update ?? false);
+          }
+        });
+      } else {
+        setStoredHash(defaultHash);
+      }
+    };
+    init();
+  }, []);
+
+  const handleUnlock = async () => {
+    const h = await hashPassword(pwInput);
+    if (h === storedHash) {
+      setUnlocked(true);
+      setPwInput('');
+      setPwError(false);
+    } else {
+      setPwError(true);
+      setTimeout(() => setPwError(false), 2000);
+    }
+  };
+
+  const saveHermesSettings = () => {
+    const settings = { scan_interval: scanInterval, max_concurrent_tasks: maxTasks, auto_push_git: autoPush, discord_alerts: discordAlerts, auto_fix_selectors: autoFix };
+    if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.set({ hermes_settings: settings });
+    showToast('Settings saved');
+  };
+
+  const saveClusterSettings = () => {
+    const cluster = { subnet, scan_range_start: scanStart, scan_range_end: scanEnd, auto_discover: autoDiscover, ssh_timeout: sshTimeout };
+    if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.set({ hermes_cluster: cluster });
+    showToast('Cluster settings saved');
+  };
+
+  const saveAgentRules = () => {
+    if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.set({ hermes_agent_rules: { md_auto_update: mdAutoUpdate } });
+    showToast('Agent rules saved');
+  };
+
+  const handleChangePw = async () => {
+    const curHash = await hashPassword(curPw);
+    if (curHash !== storedHash) { showToast('Current password incorrect', 'error'); return; }
+    if (newPw !== confirmPw) { showToast('Passwords do not match', 'error'); return; }
+    if (!newPw) { showToast('New password cannot be empty', 'error'); return; }
+    const newHash = await hashPassword(newPw);
+    if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.set({ syndrax_admin_hash: newHash });
+    setStoredHash(newHash);
+    setShowChangePw(false);
+    setCurPw(''); setNewPw(''); setConfirmPw('');
+    showToast('Password updated');
+  };
+
+  const handleFactoryReset = () => {
+    if (factoryInput !== 'RESET') return;
+    if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.clear();
+    showToast('All data cleared');
+    setUnlocked(false);
+    setFactoryWarning(false);
+    setFactoryInput('');
+  };
+
+  if (!unlocked) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="bg-slate-900 border border-white/10 rounded-2xl p-8 w-80 flex flex-col items-center gap-4">
+          <Shield className="h-10 w-10 text-amber-400" />
+          <div className="text-center">
+            <h2 className="text-lg font-bold text-slate-100">⚡ HERMES Admin</h2>
+            <p className="text-xs text-slate-500 mt-1">Administrator access required</p>
+          </div>
+          <input
+            type="password"
+            value={pwInput}
+            onChange={e => setPwInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleUnlock()}
+            placeholder="Password"
+            className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-300 bg-white/5 outline-none transition ${pwError ? 'border-red-400 animate-pulse' : 'border-white/10 focus:border-cyan-400/60'}`}
+          />
+          {pwError && <p className="text-xs text-red-400 -mt-2">Access denied</p>}
+          <button
+            onClick={handleUnlock}
+            className="w-full py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20"
+          >
+            Unlock
+          </button>
+        </div>
+        {toast && <AdminToast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto py-4 space-y-6">
+      {/* Lock button */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setUnlocked(false)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-slate-400 text-xs hover:bg-white/10"
+        >
+          <Lock className="h-3.5 w-3.5" />
+          Lock
+        </button>
+      </div>
+
+      {/* Section 1: Hermes Settings */}
+      <div className="rounded-xl border border-l-4 border-l-cyan-400 border-white/10 bg-slate-900/60 p-5">
+        <h3 className="text-sm font-bold text-slate-100 mb-4">HERMES SETTINGS</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Scan interval</label>
+            <div className="flex items-center gap-2">
+              <input type="number" value={scanInterval} onChange={e => setScanInterval(Number(e.target.value))}
+                className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-300 outline-none focus:border-cyan-400/40 text-right" />
+              <span className="text-xs text-slate-500">seconds</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Max concurrent tasks</label>
+            <input type="number" value={maxTasks} onChange={e => setMaxTasks(Number(e.target.value))}
+              className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-300 outline-none focus:border-cyan-400/40 text-right" />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Auto-push to git</label>
+            <Toggle value={autoPush} onChange={setAutoPush} />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Discord alerts</label>
+            <Toggle value={discordAlerts} onChange={setDiscordAlerts} />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Auto-fix selectors</label>
+            <Toggle value={autoFix} onChange={setAutoFix} />
+          </div>
+        </div>
+        <button onClick={saveHermesSettings}
+          className="mt-4 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20">
+          Save
+        </button>
+      </div>
+
+      {/* Section 2: Cluster Settings */}
+      <div className="rounded-xl border border-l-4 border-l-cyan-400 border-white/10 bg-slate-900/60 p-5">
+        <h3 className="text-sm font-bold text-slate-100 mb-4">CLUSTER SETTINGS</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Subnet</label>
+            <input type="text" value={subnet} onChange={e => setSubnet(e.target.value)}
+              className="w-36 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-300 outline-none focus:border-cyan-400/40 text-right" />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Scan range start</label>
+            <input type="number" value={scanStart} onChange={e => setScanStart(Number(e.target.value))}
+              className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-300 outline-none focus:border-cyan-400/40 text-right" />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Scan range end</label>
+            <input type="number" value={scanEnd} onChange={e => setScanEnd(Number(e.target.value))}
+              className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-300 outline-none focus:border-cyan-400/40 text-right" />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">Auto-discover nodes</label>
+            <Toggle value={autoDiscover} onChange={setAutoDiscover} />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">SSH timeout</label>
+            <div className="flex items-center gap-2">
+              <input type="number" value={sshTimeout} onChange={e => setSshTimeout(Number(e.target.value))}
+                className="w-20 rounded border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-300 outline-none focus:border-cyan-400/40 text-right" />
+              <span className="text-xs text-slate-500">seconds</span>
+            </div>
+          </div>
+        </div>
+        <button onClick={saveClusterSettings}
+          className="mt-4 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20">
+          Save
+        </button>
+      </div>
+
+      {/* Section 3: Agent Rules */}
+      <div className="rounded-xl border border-l-4 border-l-cyan-400 border-white/10 bg-slate-900/60 p-5">
+        <h3 className="text-sm font-bold text-slate-100 mb-4">AGENT RULES</h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-400 opacity-60">Code is truth</label>
+              <span title="Core rule — cannot be disabled"><Lock className="h-3 w-3 text-slate-500" /></span>
+            </div>
+            <Toggle value={true} onChange={() => {}} locked={true} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-400 opacity-60">Never revert to MD</label>
+              <span title="Core rule — cannot be disabled"><Lock className="h-3 w-3 text-slate-500" /></span>
+            </div>
+            <Toggle value={true} onChange={() => {}} locked={true} />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-slate-300">MD auto-update</label>
+            <Toggle value={mdAutoUpdate} onChange={setMdAutoUpdate} />
+          </div>
+        </div>
+        <button onClick={saveAgentRules}
+          className="mt-4 px-4 py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20">
+          Save
+        </button>
+      </div>
+
+      {/* Section 4: Danger Zone */}
+      <div className="rounded-xl border border-l-4 border-l-red-500 border-red-500/20 bg-slate-900/60 p-5">
+        <h3 className="text-sm font-bold text-red-400 mb-4">⚠️ Danger Zone</h3>
+        <div className="space-y-3">
+          <button
+            onClick={() => { if (confirm('Reset all model assignments to defaults?')) { if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.remove('syndrax_model_assignments'); showToast('Model assignments reset'); } }}
+            className="w-full py-2 rounded-lg border border-red-400/30 bg-red-400/5 text-red-300 text-sm font-medium hover:bg-red-400/10 text-left px-4"
+          >
+            Reset Model Assignments
+          </button>
+          <button
+            onClick={() => { if (confirm('Clear all cost tracking data?')) { if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.remove('syndrax_cost_log'); showToast('Cost log cleared'); } }}
+            className="w-full py-2 rounded-lg border border-red-400/30 bg-red-400/5 text-red-300 text-sm font-medium hover:bg-red-400/10 text-left px-4"
+          >
+            Clear Cost Log
+          </button>
+          <button
+            onClick={() => setShowChangePw(!showChangePw)}
+            className="w-full py-2 rounded-lg border border-red-400/30 bg-red-400/5 text-red-300 text-sm font-medium hover:bg-red-400/10 text-left px-4"
+          >
+            Change Password
+          </button>
+          {showChangePw && (
+            <div className="mt-2 p-4 rounded-lg border border-white/10 bg-white/5 space-y-3">
+              <input type="password" value={curPw} onChange={e => setCurPw(e.target.value)} placeholder="Current password"
+                className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40" />
+              <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="New password"
+                className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40" />
+              <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="Confirm new password"
+                className="w-full rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-cyan-400/40" />
+              <button onClick={handleChangePw}
+                className="w-full py-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 text-cyan-400 text-sm font-medium hover:bg-cyan-400/20">
+                Save Password
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => setFactoryWarning(!factoryWarning)}
+            className="w-full py-2 rounded-lg border border-red-600/50 bg-red-900/20 text-red-400 text-sm font-bold hover:bg-red-900/30 text-left px-4"
+          >
+            Factory Reset
+          </button>
+          {factoryWarning && (
+            <div className="mt-2 p-4 rounded-lg border border-red-500/30 bg-red-900/10 space-y-3">
+              <p className="text-xs text-red-300">This will clear ALL Syndrax data. Type RESET to confirm.</p>
+              <input type="text" value={factoryInput} onChange={e => setFactoryInput(e.target.value)} placeholder="Type RESET"
+                className="w-full rounded border border-red-400/30 bg-white/5 px-3 py-2 text-sm text-slate-300 outline-none focus:border-red-400/60" />
+              <button
+                onClick={handleFactoryReset}
+                disabled={factoryInput !== 'RESET'}
+                className="w-full py-2 rounded-lg border border-red-600/50 bg-red-900/30 text-red-300 text-sm font-bold hover:bg-red-900/50 disabled:opacity-40"
+              >
+                Confirm Factory Reset
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {toast && <AdminToast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN DASHBOARD COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -1944,6 +2313,13 @@ export default function DashboardPage() {
             >
               Jobs
             </button>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`text-sm font-medium flex items-center gap-1.5 ${activeTab === 'admin' ? 'text-amber-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Shield className="h-3.5 w-3.5" />
+              Admin
+            </button>
           </div>
           
           <div className="flex items-center gap-3">
@@ -2018,6 +2394,8 @@ export default function DashboardPage() {
               <p className="text-slate-500">Jobs view - Coming soon</p>
             </div>
           )}
+
+          {activeTab === 'admin' && <AdminPanel />}
         </div>
         
         {/* Bottom Action Bar */}
