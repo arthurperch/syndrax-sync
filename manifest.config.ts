@@ -90,7 +90,7 @@ action: {
     },
     {
       matches: ['*://*.ebay.com/sh/lst/*', '*://*.ebay.com/sh/lst*', '*://*.ebay.com/mys/active*'],
-      js: ['src/content/ebay-sync-controller.ts'],
+      js: ['src/content/ebay-sync-controller.ts', 'src/content/listing-optimizer.ts'],
       run_at: 'document_end'
     },
     {

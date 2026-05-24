@@ -60,7 +60,7 @@
       "js": [
         "assets/amazon-price-checker.ts-09266909.js",
         "assets/amazon-scraper.ts-cb9e63c1.js",
-        "assets/sniper-overlay.ts-3877ee36.js"
+        "assets/sniper-overlay.ts-fb6972fc.js"
       ],
       "matches": [
         "*://*.amazon.com/dp/*",
@@ -70,7 +70,7 @@
     },
     {
       "js": [
-        "assets/sniper-overlay.ts-3877ee36.js"
+        "assets/sniper-overlay.ts-fb6972fc.js"
       ],
       "matches": [
         "https://www.amazon.co.uk/dp/*",
@@ -111,7 +111,8 @@
     },
     {
       "js": [
-        "assets/ebay-sync-controller.ts-loader-47509203.js"
+        "assets/ebay-sync-controller.ts-loader-47509203.js",
+        "assets/listing-optimizer.ts-loader-d0c6a7ab.js"
       ],
       "matches": [
         "*://*.ebay.com/sh/lst/*",
@@ -180,7 +181,8 @@
       ],
       "resources": [
         "button1.mp3",
-        "dashboard.html"
+        "dashboard.html",
+        "bulklister.html"
       ],
       "use_dynamic_url": false
     },
@@ -214,7 +216,7 @@
       "resources": [
         "assets/amazon-price-checker.ts-09266909.js",
         "assets/amazon-scraper.ts-cb9e63c1.js",
-        "assets/sniper-overlay.ts-3877ee36.js"
+        "assets/sniper-overlay.ts-fb6972fc.js"
       ],
       "use_dynamic_url": false
     },
@@ -245,7 +247,8 @@
       ],
       "resources": [
         "assets/webhooks.config-c871bdc6.js",
-        "assets/ebay-sync-controller.ts-9b0eb6e6.js"
+        "assets/ebay-sync-controller.ts-9b0eb6e6.js",
+        "assets/listing-optimizer.ts-cc94f676.js"
       ],
       "use_dynamic_url": false
     },

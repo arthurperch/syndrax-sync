@@ -125,6 +125,7 @@ const pipeline = [
   { id: "06", key: "seo",          title: "SEO Generator",     phase: "Phase 5",   icon: FileText,     t: "violet" as Tone, desc: "Keyword analysis • competitor titles • optimized listing copy" },
   { id: "06.5", key: "description", title: "Description Builder", phase: "Phase 5B", icon: PenTool,    t: "violet" as Tone, desc: "HTML description templates • 5 styles • variable substitution" },
   { id: "07", key: "lister",       title: "Bulk Lister",       phase: "Phase 6",   icon: UploadCloud,  t: "pink"   as Tone, desc: "eBay listings in bulk • pricing • markup • margin calculations" },
+  { id: "07.5", key: "optimizer",  title: "Listing Optimizer", phase: "Phase 6B",  icon: RefreshCw,    t: "cyan"   as Tone, desc: "90-day lifecycle · End & Sell Similar · price reduction · delete queue" },
   { id: "08", key: "dashboard",    title: "Dashboard",         phase: "Phase 7",   icon: BarChart3,    t: "pink"   as Tone, desc: "Active listings • price changes • stock status • alerts" },
   { id: "09", key: "finance",      title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "10", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
@@ -951,6 +952,8 @@ export default function App() {
                       onClick={() => {
                         if (item.key === 'lister') {
                           chrome.tabs.create({ url: chrome.runtime.getURL('bulklister.html') });
+                        } else if (item.key === 'optimizer') {
+                          chrome.tabs.create({ url: 'https://www.ebay.com/sh/lst/active' });
                         } else {
                           setView(item.key);
                         }

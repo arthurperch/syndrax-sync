@@ -783,6 +783,51 @@ Rules:
         }
       }
 
+      // ===== SESSION G — OPTIMIZER REGISTRY CRUD =====
+
+      if (msgType === 'GET_OPTIMIZER_REGISTRY') {
+        try {
+          const r = await chrome.storage.local.get('optimizer_listing_registry');
+          return { registry: r.optimizer_listing_registry || {} };
+        } catch (e) {
+          return { registry: {}, error: String(e) };
+        }
+      }
+
+      if (msgType === 'UPDATE_OPTIMIZER_ITEM') {
+        try {
+          const { listingId, updates } = message.payload as {
+            listingId: string;
+            updates: Record<string, unknown>;
+          };
+          const r = await chrome.storage.local.get('optimizer_listing_registry');
+          const registry: Record<string, Record<string, unknown>> = r.optimizer_listing_registry || {};
+          registry[listingId] = { ...(registry[listingId] || {}), ...updates };
+          await chrome.storage.local.set({ optimizer_listing_registry: registry });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'GET_RECYCLE_QUEUE') {
+        try {
+          const r = await chrome.storage.local.get('optimizer_recycle_queue');
+          return { queue: r.optimizer_recycle_queue || [] };
+        } catch (e) {
+          return { queue: [], error: String(e) };
+        }
+      }
+
+      if (msgType === 'CLEAR_OPTIMIZER_REGISTRY') {
+        try {
+          await chrome.storage.local.remove('optimizer_listing_registry');
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }
