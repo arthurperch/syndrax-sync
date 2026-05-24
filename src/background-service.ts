@@ -889,6 +889,77 @@ Rules:
         }
       }
 
+      // ===== SESSION I — AGENT CONFIGS =====
+
+      if (msgType === 'GET_AGENT_CONFIGS') {
+        try {
+          const DEFAULT_AGENTS = [
+            { id:'1', name:'Cline Plan', role:'plan', model:'claude-haiku-4-5', provider:'anthropic', costPer1M:0.80, contextWindow:200000, tier:3, tags:['fast','cheap','planning'], isLocal:false, isActive:true, totalTokensUsed:0, totalCostUsd:0 },
+            { id:'2', name:'Cline Act', role:'act', model:'claude-sonnet-4-6', provider:'anthropic', costPer1M:3.00, contextWindow:200000, tier:5, tags:['coding','reliable','best'], isLocal:false, isActive:true, totalTokensUsed:0, totalCostUsd:0 },
+            { id:'3', name:'Hermes Routine', role:'monitor', model:'qwen2.5-coder:7b', provider:'ollama', costPer1M:0, contextWindow:32000, tier:3, tags:['local','free','coding'], isLocal:true, isActive:true, totalTokensUsed:0, totalCostUsd:0 },
+            { id:'4', name:'Hermes Research', role:'research', model:'llama3.1:8b-instruct', provider:'ollama', costPer1M:0, contextWindow:128000, tier:3, tags:['local','free','reasoning'], isLocal:true, isActive:true, totalTokensUsed:0, totalCostUsd:0 },
+            { id:'5', name:'Hermes Escalation', role:'act', model:'claude-sonnet-4-6', provider:'anthropic', costPer1M:3.00, contextWindow:200000, tier:5, tags:['escalation','complex','reliable'], isLocal:false, isActive:false, totalTokensUsed:0, totalCostUsd:0 },
+          ];
+          const r = await chrome.storage.local.get('agent_configs');
+          const configs = Array.isArray(r.agent_configs) && r.agent_configs.length > 0
+            ? r.agent_configs
+            : DEFAULT_AGENTS;
+          return { ok: true, configs };
+        } catch (e) {
+          return { ok: false, configs: [], error: String(e) };
+        }
+      }
+
+      if (msgType === 'SAVE_AGENT_CONFIG') {
+        try {
+          const agent = message.payload as { id: string; [key: string]: unknown };
+          const r = await chrome.storage.local.get('agent_configs');
+          const existing: unknown[] = Array.isArray(r.agent_configs) ? r.agent_configs : [];
+          const idx = existing.findIndex((a: unknown) => (a as { id: string }).id === agent.id);
+          if (idx >= 0) {
+            existing[idx] = agent;
+          } else {
+            existing.push(agent);
+          }
+          await chrome.storage.local.set({ agent_configs: existing });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'DELETE_AGENT_CONFIG') {
+        try {
+          const { id } = message.payload as { id: string };
+          const r = await chrome.storage.local.get('agent_configs');
+          const existing: unknown[] = Array.isArray(r.agent_configs) ? r.agent_configs : [];
+          const updated = existing.filter((a: unknown) => (a as { id: string }).id !== id);
+          await chrome.storage.local.set({ agent_configs: updated });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
+      if (msgType === 'GET_AGENT_RULES') {
+        try {
+          const r = await chrome.storage.local.get('agent_rules');
+          return { ok: true, rules: r.agent_rules || null };
+        } catch (e) {
+          return { ok: false, rules: null, error: String(e) };
+        }
+      }
+
+      if (msgType === 'SAVE_AGENT_RULES') {
+        try {
+          const rules = message.payload as Record<string, unknown>;
+          await chrome.storage.local.set({ agent_rules: rules });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }

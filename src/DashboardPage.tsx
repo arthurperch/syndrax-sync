@@ -6,12 +6,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AgentEditor } from './components/AgentEditor';
 import {
   LayoutDashboard, Server, GitBranch, Briefcase, Bell, Activity,
   FileText, Settings, MoreVertical, RefreshCw, Zap, ExternalLink,
   Search, Filter, ChevronLeft, Play, Square, Download, Database,
   Clock, AlertTriangle, CheckCircle, XCircle, Cpu, HardDrive,
-  Wifi, Triangle, Edit, Trash2, Plus, RefreshCcw, X, Shield, Lock
+  Wifi, Triangle, Edit, Trash2, Plus, RefreshCcw, X, Shield, Lock, Bot
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
@@ -67,7 +68,7 @@ interface ClusterStatus {
   nodes: ClusterNode[];
 }
 
-type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'models' | 'jobs' | 'admin';
+type TabView = 'nodes' | 'manager' | 'pipelines' | 'alerts' | 'models' | 'jobs' | 'admin' | 'agents';
 type StatusFilter = 'all' | 'online' | 'standby' | 'offline';
 
 interface NodeConfig {
@@ -2320,6 +2321,13 @@ export default function DashboardPage() {
               <Shield className="h-3.5 w-3.5" />
               Admin
             </button>
+            <button
+              onClick={() => setActiveTab('agents')}
+              className={`text-sm font-medium flex items-center gap-1.5 ${activeTab === 'agents' ? 'text-violet-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Bot className="h-3.5 w-3.5" />
+              Agents
+            </button>
           </div>
           
           <div className="flex items-center gap-3">
@@ -2396,6 +2404,7 @@ export default function DashboardPage() {
           )}
 
           {activeTab === 'admin' && <AdminPanel />}
+          {activeTab === 'agents' && <AgentEditor />}
         </div>
         
         {/* Bottom Action Bar */}
