@@ -270,7 +270,7 @@ function Sparkline({ data, color = 'cyan' }: { data: number[]; color?: string })
 // NODE CARD COMPONENT
 // ═══════════════════════════════════════════════════════════════
 
-function NodeCard({ node }: { node: ClusterNode }) {
+function NodeCard({ node, isSelected, onSelect }: { node: ClusterNode; isSelected: boolean; onSelect: () => void }) {
   const statusColor = getStatusColor(node.status);
   const loadColor = getLoadColor(node.load);
   
@@ -278,7 +278,12 @@ function NodeCard({ node }: { node: ClusterNode }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col rounded-2xl border border-white/10 bg-slate-950/80 p-4 min-h-[520px]"
+      onClick={onSelect}
+      className={`flex flex-col rounded-2xl border bg-slate-950/80 p-4 min-h-[520px] cursor-pointer transition-all duration-200 ${
+        isSelected
+          ? 'border-cyan-400/60 shadow-lg shadow-cyan-400/20'
+          : 'border-white/10 hover:border-white/20'
+      }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -449,6 +454,240 @@ function NodeCard({ node }: { node: ClusterNode }) {
         <p className="text-[9px] text-slate-600">
           Last seen: {formatTimeAgo(node.last_seen)}
         </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NODE DETAIL PANEL COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+function getMetricColor(value: number, thresholds: [number, number]): string {
+  if (value < thresholds[0]) return 'text-emerald-400';
+  if (value < thresholds[1]) return 'text-amber-400';
+  return 'text-red-400';
+}
+
+function getMetricBarColor(value: number, thresholds: [number, number]): string {
+  if (value < thresholds[0]) return 'bg-emerald-400';
+  if (value < thresholds[1]) return 'bg-amber-400';
+  return 'bg-red-400';
+}
+
+function NodeDetailPanel({ node, onClose }: { node: ClusterNode; onClose: () => void }) {
+  const [toast, setToast] = useState<string | null>(null);
+  const statusColor = getStatusColor(node.status);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  };
+
+  const handleCopyIP = () => {
+    navigator.clipboard.writeText(node.ip).then(() => {
+      showToast(`Copied: ${node.ip}`);
+    }).catch(() => {
+      showToast(`IP: ${node.ip}`);
+    });
+  };
+
+  const cpuColor = getMetricColor(node.cpu, [50, 80]);
+  const ramColor = getMetricColor(node.ram, [50, 80]);
+  const diskColor = getMetricColor(node.disk, [50, 80]);
+  const pingColor = getMetricColor(node.ping_ms, [5, 20]);
+  const cpuBarColor = getMetricBarColor(node.cpu, [50, 80]);
+  const ramBarColor = getMetricBarColor(node.ram, [50, 80]);
+  const diskBarColor = getMetricBarColor(node.disk, [50, 80]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.2 }}
+      className="mt-4 rounded-2xl border border-cyan-400/30 bg-slate-900/90 p-5 shadow-xl shadow-cyan-400/10"
+    >
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-slate-800 border border-cyan-400/40 text-cyan-300 text-xs px-4 py-2 rounded-lg font-mono shadow-lg">
+          {toast}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className={`h-3 w-3 rounded-full bg-${statusColor}-400 ${node.agent_active ? 'animate-pulse' : ''}`} />
+          <div>
+            <h2 className="text-lg font-bold text-slate-100">{node.name}</h2>
+            <p className="text-xs text-slate-500 font-mono">{node.hostname} · {node.ip}</p>
+          </div>
+          <span className={`rounded-full border border-${statusColor}-400/40 bg-${statusColor}-400/10 px-3 py-1 text-xs font-medium text-${statusColor}-300`}>
+            {node.status === 'online' && node.agent_active ? 'Active' : node.status.charAt(0).toUpperCase() + node.status.slice(1)}
+          </span>
+          <span className="rounded-full border border-slate-600/40 bg-slate-800/40 px-3 py-1 text-xs text-slate-400">
+            {node.role}
+          </span>
+          <span className="rounded-full border border-slate-600/40 bg-slate-800/40 px-3 py-1 text-xs text-slate-400">
+            {node.os}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex items-center justify-center h-8 w-8 rounded-lg border border-white/10 bg-white/5 text-slate-500 hover:text-slate-300 hover:bg-white/10 transition"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="grid grid-cols-4 gap-4 mb-5">
+        {/* CPU */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">CPU</span>
+            <Cpu className="h-3.5 w-3.5 text-slate-600" />
+          </div>
+          <p className={`text-2xl font-bold ${cpuColor}`}>{node.cpu}%</p>
+          <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-full rounded-full ${cpuBarColor}`} style={{ width: `${node.cpu}%` }} />
+          </div>
+        </div>
+
+        {/* RAM */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">RAM</span>
+            <HardDrive className="h-3.5 w-3.5 text-slate-600" />
+          </div>
+          <p className={`text-2xl font-bold ${ramColor}`}>{node.ram}%</p>
+          <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-full rounded-full ${ramBarColor}`} style={{ width: `${node.ram}%` }} />
+          </div>
+        </div>
+
+        {/* Disk */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Disk</span>
+            <Database className="h-3.5 w-3.5 text-slate-600" />
+          </div>
+          <p className={`text-2xl font-bold ${diskColor}`}>{node.disk}%</p>
+          <div className="mt-2 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-full rounded-full ${diskBarColor}`} style={{ width: `${node.disk}%` }} />
+          </div>
+        </div>
+
+        {/* Ping */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider">Ping</span>
+            <Wifi className="h-3.5 w-3.5 text-slate-600" />
+          </div>
+          <p className={`text-2xl font-bold ${pingColor}`}>{node.ping_ms}<span className="text-sm font-normal text-slate-500 ml-1">ms</span></p>
+          <p className="mt-2 text-[10px] text-slate-600">{node.process_count} processes</p>
+        </div>
+      </div>
+
+      {/* Details Row */}
+      <div className="grid grid-cols-3 gap-4 mb-5">
+        {/* Agent Status */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Agent Status</p>
+          {node.agent_active ? (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Wifi className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
+                <span className="text-xs font-medium text-cyan-300">ACTIVE</span>
+              </div>
+              <p className="text-xs text-slate-400">{node.agent_phase}</p>
+              {node.agent_model && (
+                <p className="text-[10px] text-slate-500 font-mono">{node.agent_model}</p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-slate-700" />
+              <span className="text-xs text-slate-500">No Agent Running</span>
+            </div>
+          )}
+          <div className="mt-2 pt-2 border-t border-white/5">
+            <p className="text-[10px] text-slate-600">Uptime: <span className="text-slate-400">{node.uptime}</span></p>
+            <p className="text-[10px] text-slate-600">Tasks: <span className="text-slate-400">{node.tasks}</span></p>
+          </div>
+        </div>
+
+        {/* Inventory */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Inventory</p>
+          <p className="text-2xl font-bold text-cyan-400">{node.in_stock.toLocaleString()}</p>
+          <p className="text-[10px] text-slate-500 mb-2">items in stock</p>
+          <div className="h-12 w-full">
+            <Sparkline data={node.inventory_trend_7d} color={statusColor} />
+          </div>
+          <p className="text-[10px] text-slate-600 mt-1">7-day trend</p>
+        </div>
+
+        {/* Alerts */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Alerts</p>
+          {node.alerts > 0 ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                <span className="text-lg font-bold text-amber-400">{node.alerts}</span>
+                <span className="text-xs text-amber-600">active</span>
+              </div>
+              {node.alert_sources.map((src, i) => (
+                <div key={i} className="flex items-start gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                  <p className="text-[10px] text-amber-300/80 leading-tight">{src}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs text-emerald-400">All clear</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => showToast(`▶ Start signal sent to ${node.name}`)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-400/40 bg-emerald-400/10 text-emerald-400 text-xs font-medium hover:bg-emerald-400/20 transition"
+        >
+          <Play className="h-3.5 w-3.5" />
+          Start
+        </button>
+        <button
+          onClick={() => showToast(`■ Stop signal sent to ${node.name}`)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-400/40 bg-red-400/10 text-red-400 text-xs font-medium hover:bg-red-400/20 transition"
+        >
+          <Square className="h-3.5 w-3.5" />
+          Stop
+        </button>
+        <button
+          onClick={() => showToast(`↺ Restart signal sent to ${node.name}`)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-400 text-xs font-medium hover:bg-amber-400/20 transition"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Restart
+        </button>
+        <button
+          onClick={handleCopyIP}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-slate-400 text-xs font-medium hover:bg-white/10 transition"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Copy IP
+        </button>
+        <div className="ml-auto text-[10px] text-slate-600">
+          Last seen: <span className="text-slate-400">{formatTimeAgo(node.last_seen)}</span>
+        </div>
       </div>
     </motion.div>
   );
@@ -2003,6 +2242,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabView>('nodes');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClusterNode, setSelectedClusterNode] = useState<ClusterNode | null>(null);
   
   // Fetch cluster status
   const fetchData = useCallback(async () => {
@@ -2370,10 +2610,27 @@ export default function DashboardPage() {
         {/* Content Area - Conditional by Tab */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {activeTab === 'nodes' && (
-            <div className="grid grid-cols-3 gap-4 pb-4">
-              {filteredNodes.map((node) => (
-                <NodeCard key={node.name} node={node} />
-              ))}
+            <div>
+              <div className="grid grid-cols-3 gap-4">
+                {filteredNodes.map((node) => (
+                  <NodeCard
+                    key={node.name}
+                    node={node}
+                    isSelected={selectedClusterNode?.name === node.name}
+                    onSelect={() => setSelectedClusterNode(
+                      selectedClusterNode?.name === node.name ? null : node
+                    )}
+                  />
+                ))}
+              </div>
+              <AnimatePresence>
+                {selectedClusterNode && (
+                  <NodeDetailPanel
+                    node={selectedClusterNode}
+                    onClose={() => setSelectedClusterNode(null)}
+                  />
+                )}
+              </AnimatePresence>
             </div>
           )}
           
