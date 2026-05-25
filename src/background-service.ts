@@ -454,6 +454,34 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         return { success: true, result };
       }
 
+      // ===== BULK LISTER: FETCH AMAZON PRODUCT =====
+      if (msgType === 'FETCH_AMAZON_PRODUCT') {
+        const { asin } = payload as { asin: string };
+        try {
+          // Scrape Amazon product page via existing amazon scraper
+          const tabs = await chrome.tabs.query({ url: '*://*.amazon.com/*' });
+          if (tabs.length === 0) {
+            return { error: 'No Amazon tab open — open Amazon first' };
+          }
+          const tab = tabs[0];
+          const result = await chrome.tabs.sendMessage(tab.id!, {
+            type: 'SCRAPE_AMAZON_PRODUCT',
+            asin
+          });
+          return result ?? { error: 'No response from Amazon scraper' };
+        } catch (e) {
+          // Fallback: return basic structure with ASIN
+          return {
+            title: `Amazon Product ${asin}`,
+            price: 0,
+            brand: '',
+            image: '',
+            asin,
+            error: 'Could not scrape — open the product page on Amazon manually'
+          };
+        }
+      }
+
       // ===== IMAGE PIPELINE: FETCH IMAGE (CORS bypass) =====
       if (msgType === 'FETCH_IMAGE_FOR_PIPELINE') {
         const { url } = message.payload as { url: string };
