@@ -13,7 +13,7 @@ import {
   MoreVertical, Zap, RefreshCw, ExternalLink, ChevronLeft,
   ChevronRight, Play, Pause, Square, Download, Copy,
   CheckCircle, AlertTriangle, XCircle, Loader, Plus,
-  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users, TrendingUp, Image, Clock,
+  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users, TrendingUp, Image, Clock, Bug,
 } from "lucide-react";
 import TitleBuilder from './pages/TitleBuilder';
 import DescriptionBuilder from './components/DescriptionBuilder';
@@ -22,6 +22,8 @@ import { WarmupAgent } from './pages/WarmupAgent';
 import ImagePipeline from './pages/ImagePipeline';
 import PricingDashboard from './pages/PricingDashboard';
 import InventoryLifecycle from './pages/InventoryLifecycle';
+import BugPanel from './pages/BugPanel';
+import { logger } from './services/bug-logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -156,6 +158,7 @@ const pipeline = [
   { id: "12",   key: "lifecycle",  title: "Inventory Lifecycle", phase: "Phase 9", icon: Clock,        t: "orange" as Tone, desc: "90-day lifecycle • markdown triggers • clearance automation" },
   { id: "11.5", key: "finance",    title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "11", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
+  { id: "13", key: "bugs",         title: "Bug Panel",         phase: "Dev Tools", icon: Bug,          t: "pink"   as Tone, desc: "Error log • warnings • manual bug reports • Discord alerts" },
 ];
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
@@ -866,6 +869,21 @@ function SniperCard() {
 export default function App() {
   const [view, setView] = useState<View>("menu");
 
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      logger.error('App', e.message, { filename: e.filename, lineno: e.lineno });
+    };
+    const onUnhandledRejection = (e: PromiseRejectionEvent) => {
+      logger.error('App', String(e.reason));
+    };
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
+  }, []);
+
   const viewMap: Record<string, React.FC<{ onBack: () => void }>> = {
     dashboard:    DashboardView,
     inventory:    InventoryView,
@@ -879,6 +897,7 @@ export default function App() {
     images:       ({ onBack }) => <ImagePipeline onBack={onBack} />,
     pricing:      ({ onBack }) => <PricingDashboard onBack={onBack} />,
     lifecycle:    ({ onBack }) => <InventoryLifecycle onBack={onBack} />,
+    bugs:         ({ onBack }) => <BugPanel onBack={onBack} />,
   };
 
   const renderDetail = () => {
