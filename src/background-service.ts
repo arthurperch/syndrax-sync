@@ -456,7 +456,7 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
 
       // ===== BULK LISTER: FETCH AMAZON PRODUCT =====
       if (msgType === 'FETCH_AMAZON_PRODUCT') {
-        const { asin } = payload as { asin: string };
+        const { asin } = message.payload as { asin: string };
         try {
           // Scrape Amazon product page via existing amazon scraper
           const tabs = await chrome.tabs.query({ url: '*://*.amazon.com/*' });
