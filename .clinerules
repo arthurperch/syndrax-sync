@@ -1,9 +1,13 @@
-## WORKING DIRECTORY
-All work happens in: C:\Users\olegp\OneDrive\Apps\syndrax-sync
-NEVER cd to Desktop, C:\hermes-workspace, or any other directory.
-If you find yourself outside this directory, cd back immediately.
+## WORKING DIRECTORY — READ FIRST
+ALL work happens in: C:\Users\olegp\OneDrive\Apps\syndrax-sync
+NEVER use C:\Users\olegp\hermes-workspace\syndrax-sync
+NEVER use C:\Users\olegp\Desktop
+If you are not in C:\Users\olegp\OneDrive\Apps\syndrax-sync, cd there immediately before doing anything else.
 
-## Session Rules
+### Loop Prevention
+- After git push confirms success, STOP IMMEDIATELY
+- Do NOT run git add, commit, or push more than once per session
+- If the last command output contains "master -> master", the session is DONE## Session Rules
 
 ### Git — Mandatory Last Step
 After every successful build (zero TypeScript errors):
