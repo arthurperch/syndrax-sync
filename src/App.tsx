@@ -13,7 +13,7 @@ import {
   MoreVertical, Zap, RefreshCw, ExternalLink, ChevronLeft,
   ChevronRight, Play, Pause, Square, Download, Copy,
   CheckCircle, AlertTriangle, XCircle, Loader, Plus,
-  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users, TrendingUp, Image,
+  ArrowUpDown, Filter, Eye, PenTool, MessageSquare, Users, TrendingUp, Image, Clock,
 } from "lucide-react";
 import TitleBuilder from './pages/TitleBuilder';
 import DescriptionBuilder from './components/DescriptionBuilder';
@@ -21,10 +21,11 @@ import { AccountManager } from './pages/AccountManager';
 import { WarmupAgent } from './pages/WarmupAgent';
 import ImagePipeline from './pages/ImagePipeline';
 import PricingDashboard from './pages/PricingDashboard';
+import InventoryLifecycle from './pages/InventoryLifecycle';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tone = "cyan" | "blue" | "violet" | "pink" | "amber";
+type Tone = "cyan" | "blue" | "violet" | "pink" | "amber" | "orange";
 type View = "menu" | string;
 
 interface SyncStats {
@@ -107,6 +108,14 @@ const tone: Record<Tone, {
     activeGlow: "shadow-[0_0_28px_rgba(251,191,36,0.16)]",
     dot: "bg-amber-400",
   },
+  orange: {
+    num: "text-orange-300", text: "text-orange-200",
+    border: "border-orange-400/40", bg: "bg-orange-400/10",
+    chip: "border-orange-400/50 bg-orange-400/10 text-orange-100",
+    glow: "shadow-orange-500/20",
+    activeGlow: "shadow-[0_0_28px_rgba(251,146,60,0.16)]",
+    dot: "bg-orange-400",
+  },
 };
 
 // ─── Chrome helpers ───────────────────────────────────────────────────────────
@@ -144,6 +153,7 @@ const pipeline = [
   { id: "09", key: "warmup",       title: "Warmup Agent",      phase: "Phase 7",   icon: TrendingUp,   t: "cyan"   as Tone, desc: "eBay account warmup • daily limits • safe listing schedule" },
   { id: "10", key: "images",       title: "Image Pipeline",    phase: "Phase 8",   icon: Image,        t: "violet" as Tone, desc: "Fetch • resize • optimize • preview product images" },
   { id: "10.5", key: "pricing",    title: "Pricing Strategy",  phase: "Phase 9",   icon: TrendingUp,   t: "amber"  as Tone, desc: "Rules engine • dynamic pricing • margin analysis" },
+  { id: "12",   key: "lifecycle",  title: "Inventory Lifecycle", phase: "Phase 9", icon: Clock,        t: "orange" as Tone, desc: "90-day lifecycle • markdown triggers • clearance automation" },
   { id: "11.5", key: "finance",    title: "Finance",           phase: "Business",  icon: DollarSign,   t: "pink"   as Tone, desc: "Earnings tracking • reconciliation • profit analysis" },
   { id: "11", key: "settings",     title: "Settings",          phase: "Config",    icon: Settings,     t: "violet" as Tone, desc: "Filter toggles • API keys • Discord webhooks" },
 ];
@@ -868,6 +878,7 @@ export default function App() {
     warmup:       ({ onBack }) => <WarmupAgent onBack={onBack} />,
     images:       ({ onBack }) => <ImagePipeline onBack={onBack} />,
     pricing:      ({ onBack }) => <PricingDashboard onBack={onBack} />,
+    lifecycle:    ({ onBack }) => <InventoryLifecycle onBack={onBack} />,
   };
 
   const renderDetail = () => {
