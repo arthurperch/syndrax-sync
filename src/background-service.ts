@@ -565,10 +565,20 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
             productUrl: `https://www.amazon.com/dp/${asin}`,
             description: description || '',
           });
-          // Override with BulkLister-supplied values where provided
-          if (condition) (listing as any).condition = condition;
-          if (quantity) listing.quantity = quantity;
-          return { success: true, listing };
+          // Store pendingListing to chrome.storage so ebay-listing-creator.ts
+          // content script can read it on init and fill the eBay sell form
+          await chrome.storage.local.set({
+            pendingListing: {
+              title,
+              description: description || listing.description,
+              price: ebayPrice,
+              condition: condition || 'New',
+              quantity: quantity || 1,
+            }
+          });
+          // Open eBay sell page — content script reads pendingListing on its own init
+          chrome.tabs.create({ url: 'https://www.ebay.com/sl/sell', active: true });
+          return { success: true };
         } catch (e) {
           return { success: false, error: String(e) };
         }
