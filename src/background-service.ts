@@ -457,14 +457,17 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
       // ===== BULK LISTER: FETCH AMAZON PRODUCT =====
       if (msgType === 'FETCH_AMAZON_PRODUCT') {
         const { asin } = message.payload as { asin: string };
+        let newTab: chrome.tabs.Tab | null = null;
         try {
-          // Scrape Amazon product page via existing amazon scraper
-          const tabs = await chrome.tabs.query({ url: '*://*.amazon.com/*' });
-          if (tabs.length === 0) {
-            return { error: 'No Amazon tab open — open Amazon first' };
-          }
-          const tab = tabs[0];
-          const result = await chrome.tabs.sendMessage(tab.id!, {
+          // Open a new Amazon tab for this ASIN
+          newTab = await chrome.tabs.create({
+            url: `https://www.amazon.com/dp/${asin}`,
+            active: false
+          });
+          // Wait 3000ms for the page to load
+          await new Promise(r => setTimeout(r, 3000));
+          // Scrape the product page
+          const result = await chrome.tabs.sendMessage(newTab.id!, {
             type: 'SCRAPE_AMAZON_PRODUCT',
             asin
           });
@@ -479,6 +482,11 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
             asin,
             error: 'Could not scrape — open the product page on Amazon manually'
           };
+        } finally {
+          // Always close the tab we opened
+          if (newTab?.id) {
+            chrome.tabs.remove(newTab.id).catch(() => {});
+          }
         }
       }
 
@@ -1271,8 +1279,10 @@ async function runResearchPipeline(query: string): Promise<void> {
           console.log(`[Research] Product flagged: ${compliance.reasons.join(', ')}`);
         }
 
-        // Report to Discord
-        await discord.reportResearchResult(product, listing, compliance);
+        // Report to Discord (only if listing was created — null listing crashes reportResearchResult)
+        if (listing) {
+          await discord.reportResearchResult(product, listing, compliance);
+        }
 
         // Small delay between products
         await new Promise(r => setTimeout(r, 500));
