@@ -1260,11 +1260,6 @@ async function runResearchPipeline(query: string): Promise<void> {
 
     if (products.length === 0) {
       console.log(`[Research] No products found for query: "${query}"`);
-      await discord.reportResearchResult(
-        { title: `No results for "${query}"`, asin: 'N/A', price: 0, rating: 0, reviewCount: 0, imageUrl: '', productUrl: '' },
-        null,
-        { passed: false, reasons: ['No products found'], riskLevel: 'MEDIUM', filtersFailed: [] }
-      );
       return;
     }
 
