@@ -544,6 +544,36 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         }
       }
 
+      // ===== BULK LISTER: CREATE EBAY LISTING =====
+      if (msgType === 'CREATE_EBAY_LISTING') {
+        const { asin, ebayPrice, title, description, condition, quantity } = message.payload as {
+          asin: string;
+          ebayPrice: number;
+          title: string;
+          description?: string;
+          condition?: string;
+          quantity?: number;
+        };
+        try {
+          const listing = await createListing({
+            asin,
+            title,
+            price: ebayPrice,
+            rating: 0,
+            reviewCount: 0,
+            imageUrl: '',
+            productUrl: `https://www.amazon.com/dp/${asin}`,
+            description: description || '',
+          });
+          // Override with BulkLister-supplied values where provided
+          if (condition) (listing as any).condition = condition;
+          if (quantity) listing.quantity = quantity;
+          return { success: true, listing };
+        } catch (e) {
+          return { success: false, error: String(e) };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }
