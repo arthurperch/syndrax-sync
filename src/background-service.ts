@@ -464,22 +464,44 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
             url: `https://www.amazon.com/dp/${asin}`,
             active: false
           });
-          // Wait 6000ms for the page to load (Amazon pages are slow to render)
-          await new Promise(r => setTimeout(r, 6000));
-          // Scrape the product page
-          const result = await chrome.tabs.sendMessage(newTab.id!, {
-            type: 'SCRAPE_PRODUCT',
-            asin
-          });
-          // Map scraper fields to BulkLister expected format
-          if (result?.success && result.product) {
-            const p = result.product;
+
+          // Retry executeScript every 1500ms up to 10 times until #productTitle is present
+          const scrapeFunc = () => {
+            const title = document.querySelector('#productTitle')?.textContent?.trim() || '';
+            const priceEl = document.querySelector('.a-price .a-offscreen, #priceblock_ourprice, #priceblock_dealprice, .a-price-whole');
+            const price = parseFloat((priceEl?.textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+            const asinMatch = window.location.href.match(/\/dp\/([A-Z0-9]{10})/);
+            const asin = asinMatch?.[1] || '';
+            const mainImage = (document.querySelector('#landingImage, #imgBlkFront') as HTMLImageElement)?.src || '';
+            if (!title) return null;
+            return { title, price, asin, mainImage };
+          };
+
+          let scraped: { title: string; price: number; asin: string; mainImage: string } | null = null;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            await new Promise(r => setTimeout(r, 1500));
+            try {
+              const injectionResults = await chrome.scripting.executeScript({
+                target: { tabId: newTab.id! },
+                func: scrapeFunc
+              });
+              const result = injectionResults?.[0]?.result;
+              if (result?.title) {
+                scraped = result;
+                break;
+              }
+            } catch {
+              // Page not ready yet — keep retrying
+            }
+          }
+
+          if (scraped) {
             return {
-              title: p.title || '',
-              price: p.price || 0,
+              title: scraped.title,
+              price: scraped.price || 0,
               brand: '',
-              image: p.mainImage || p.images?.[0] || '',
-              asin: p.asin || asin,
+              image: scraped.mainImage || '',
+              asin: scraped.asin || asin,
             };
           }
           return { error: 'Could not scrape product data — try again' };
