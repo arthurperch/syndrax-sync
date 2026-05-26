@@ -262,11 +262,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // Auto-detect if we're on the active listings page and should scan
-function init() {
+async function init() {
   const url = window.location.href;
-  
+
   // Only auto-start if on the correct page
   if (url.includes('ebay.com/sh/lst/active') || url.includes('ebay.com/sh/lst?')) {
+    // Guard: if a listing is being created, this tab was opened by the bulk lister
+    // and the inventory scanner must not hijack it.
+    const { pendingListing } = await chrome.storage.local.get('pendingListing');
+    if (pendingListing) {
+      console.log('[Syndrax Sync] Skipping auto-scan — listing creation in progress');
+      return;
+    }
+
     console.log('[Syndrax Sync] eBay Active Listings page detected');
     
     // Create floating panel to show we're ready

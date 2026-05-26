@@ -568,6 +568,39 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           // Override with BulkLister-supplied values where provided
           if (condition) (listing as any).condition = condition;
           if (quantity) listing.quantity = quantity;
+
+          // Store pendingListing so ebay-listing-creator.ts auto-fills the form on load
+          const pendingListing = {
+            title: listing.title,
+            description: listing.description,
+            price: listing.price,
+            condition: (listing as any).condition ?? 'New',
+            quantity: listing.quantity,
+            images: listing.images,
+          };
+          await chrome.storage.local.set({ pendingListing });
+
+          // ?mode=NewListing prevents eBay from redirecting to /sh/lst/active
+          const tab = await chrome.tabs.create({
+            url: 'https://www.ebay.com/sl/sell?mode=NewListing',
+            active: true,
+          });
+
+          // Fallback: send FILL_LISTING once the tab finishes loading.
+          // ebay-listing-creator.ts init() also reads pendingListing from storage directly.
+          if (tab.id) {
+            const tabId = tab.id;
+            const onUpdated = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+              if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(onUpdated);
+                setTimeout(() => {
+                  chrome.tabs.sendMessage(tabId, { type: 'FILL_LISTING', payload: pendingListing }).catch(() => {});
+                }, 2000);
+              }
+            };
+            chrome.tabs.onUpdated.addListener(onUpdated);
+          }
+
           return { success: true, listing };
         } catch (e) {
           return { success: false, error: String(e) };
