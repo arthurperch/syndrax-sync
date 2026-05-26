@@ -464,14 +464,25 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
             url: `https://www.amazon.com/dp/${asin}`,
             active: false
           });
-          // Wait 4000ms for the page to load
-          await new Promise(r => setTimeout(r, 4000));
+          // Wait 6000ms for the page to load (Amazon pages are slow to render)
+          await new Promise(r => setTimeout(r, 6000));
           // Scrape the product page
           const result = await chrome.tabs.sendMessage(newTab.id!, {
             type: 'SCRAPE_PRODUCT',
             asin
           });
-          return result ?? { error: 'No response from Amazon scraper' };
+          // Map scraper fields to BulkLister expected format
+          if (result?.success && result.product) {
+            const p = result.product;
+            return {
+              title: p.title || '',
+              price: p.price || 0,
+              brand: '',
+              image: p.mainImage || p.images?.[0] || '',
+              asin: p.asin || asin,
+            };
+          }
+          return { error: 'Could not scrape product data — try again' };
         } catch (e) {
           // Fallback: return basic structure with ASIN
           return {
