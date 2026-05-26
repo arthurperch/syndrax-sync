@@ -464,11 +464,11 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
             url: `https://www.amazon.com/dp/${asin}`,
             active: false
           });
-          // Wait 3000ms for the page to load
-          await new Promise(r => setTimeout(r, 3000));
+          // Wait 4000ms for the page to load
+          await new Promise(r => setTimeout(r, 4000));
           // Scrape the product page
           const result = await chrome.tabs.sendMessage(newTab.id!, {
-            type: 'SCRAPE_AMAZON_PRODUCT',
+            type: 'SCRAPE_PRODUCT',
             asin
           });
           return result ?? { error: 'No response from Amazon scraper' };
