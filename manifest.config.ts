@@ -93,11 +93,11 @@ action: {
     },
     {
       matches: ['*://*.ebay.com/sh/lst/*', '*://*.ebay.com/sh/lst*', '*://*.ebay.com/mys/active*'],
-      js: ['src/content/ebay-sync-controller.ts', 'src/content/listing-optimizer.ts'],
+      js: ['src/content/ebay-sync-controller.ts', 'src/content/listing-optimizer.ts', 'src/content/ebay-inventory-scanner.ts'],
       run_at: 'document_end'
     },
     {
-      matches: ['*://*.ebay.com/sl/sell*', '*://*.ebay.com/sell/create*'],
+      matches: ['*://*.ebay.com/sl/sell*', '*://*.ebay.com/sell/list*', '*://*.ebay.com/sell/create*'],
       js: ['src/content/ebay-listing-creator.ts'],
       run_at: 'document_end'
     },
