@@ -2135,9 +2135,15 @@ async function init() {
     console.log('[Syndrax Sync] Not a listings page, skipping');
     return;
   }
-  
+
+  // Guard: don't run if listing creation is in progress
+  const { pendingListing } = await chrome.storage.local.get('pendingListing');
+  if (pendingListing) {
+    console.log('[Syndrax Sync] Skipping sync — listing creation in progress');
+    return;
+  }
+
   console.log('[Syndrax Sync] eBay Active Listings page detected!');
-  
   // Setup navigation blocker to prevent bad redirects
   setupNavigationBlocker();
   

@@ -115,7 +115,7 @@
     },
     {
       "js": [
-        "assets/ebay-sync-controller.ts-loader-81ffbea4.js",
+        "assets/ebay-sync-controller.ts-loader-8caa417e.js",
         "assets/listing-optimizer.ts-4ed993c7.js"
       ],
       "matches": [
@@ -252,8 +252,8 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/webhooks.config-1e7b2710.js",
-        "assets/ebay-sync-controller.ts-64601b91.js",
+        "assets/webhooks.config-9ddb5e18.js",
+        "assets/ebay-sync-controller.ts-481d7296.js",
         "assets/listing-optimizer.ts-4ed993c7.js"
       ],
       "use_dynamic_url": false

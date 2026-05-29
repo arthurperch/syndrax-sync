@@ -4,6 +4,8 @@
  * Posts errors to Discord #bug-reports (errors channel)
  */
 
+import { WEBHOOKS } from '../config/webhooks.config';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface BugReport {
@@ -26,8 +28,6 @@ const MAX_ENTRIES = 200;
 
 async function postBugToDiscord(report: BugReport): Promise<void> {
   try {
-    // Dynamically import to avoid issues in non-extension contexts
-    const { WEBHOOKS } = await import('../config/webhooks.config');
     const webhookUrl = (WEBHOOKS as Record<string, string>)['errors'];
     if (!webhookUrl) return;
 
