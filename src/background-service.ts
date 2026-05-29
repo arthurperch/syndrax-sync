@@ -2,6 +2,7 @@ import { storage, type InventoryItem } from './services/storage';
 import type { Message } from './services/messaging';
 import { discord, sendDailySummaryWebhook } from './services/discord-logger';
 import { claimTrackingNumber, type ClaimParams } from './services/trackcaptain';
+import { handleCheckVero, handleCreateEbayListing } from './background/listing-handler';
 
 // Helper to get next midnight timestamp
 function getNextMidnight(): number {
@@ -544,44 +545,22 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         }
       }
 
+      // ===== VERO CHECK =====
+      if (msgType === 'CHECK_VERO') {
+        const { title, brand } = message.payload as { title: string; brand: string };
+        return handleCheckVero(title, brand);
+      }
+
       // ===== BULK LISTER: CREATE EBAY LISTING =====
       if (msgType === 'CREATE_EBAY_LISTING') {
-        const { asin, ebayPrice, title, description, condition, quantity } = message.payload as {
+        return handleCreateEbayListing(message.payload as {
           asin: string;
           ebayPrice: number;
           title: string;
           description?: string;
           condition?: string;
           quantity?: number;
-        };
-        try {
-          const listing = await createListing({
-            asin,
-            title,
-            price: ebayPrice,
-            rating: 0,
-            reviewCount: 0,
-            imageUrl: '',
-            productUrl: `https://www.amazon.com/dp/${asin}`,
-            description: description || '',
-          });
-          // Store pendingListing to chrome.storage so ebay-listing-creator.ts
-          // content script can read it on init and fill the eBay sell form
-          await chrome.storage.local.set({
-            pendingListing: {
-              title,
-              description: description || listing.description,
-              price: ebayPrice,
-              condition: condition || 'New',
-              quantity: quantity || 1,
-            }
-          });
-          // Open eBay sell page — content script reads pendingListing on its own init
-          chrome.tabs.create({ url: 'https://www.ebay.com/sl/sell', active: true });
-          return { success: true };
-        } catch (e) {
-          return { success: false, error: String(e) };
-        }
+        });
       }
 
       return { success: false, error: 'Unknown message type' };
