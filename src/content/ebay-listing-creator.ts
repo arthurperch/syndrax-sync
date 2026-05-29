@@ -230,7 +230,8 @@ async function init(): Promise<void> {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'FILL_LISTING') {
-    const data = message.payload as ListingData;
+    const data = message.payload as ListingData | undefined;
+    if (!data) { sendResponse({ success: false, filled: 0 }); return true; }
     fillListingForm(data).then(({ filled }) => {
       sendResponse({ success: filled > 0, filled });
     });

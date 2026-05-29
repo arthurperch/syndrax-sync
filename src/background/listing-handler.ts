@@ -28,7 +28,8 @@ export async function handleCreateEbayListing(payload: {
   await chrome.storage.local.set({
     pendingListing: { title, description, price: ebayPrice, condition, quantity, images: [], asin }
   });
-  const tab = await chrome.tabs.create({ url: 'https://www.ebay.com/sell/list', active: true });
+  // Open eBay's prelist page — content script auto-submits ASIN via Product ID tab.
+  const tab = await chrome.tabs.create({ url: 'https://www.ebay.com/sl/prelist/home', active: true });
   chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
     if (tabId === tab.id && info.status === 'complete') {
       chrome.tabs.onUpdated.removeListener(listener);
