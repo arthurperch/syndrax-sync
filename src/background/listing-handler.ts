@@ -1,70 +1,31 @@
-// Listing handler — extracted from background-service.ts default: block
-// Handles: FETCH_AMAZON_PRODUCT, CHECK_VERO, CREATE_EBAY_LISTING
-
 import { VERO_BRANDS } from '../services/compliance';
 
-// ─── VERO lookup (built once) ──────────────────────────────────────────────────
+const HIGH_RISK_BRANDS = ['Apple', 'Samsung', 'Nike', 'Louis Vuitton', 'Disney'];
 
-const VERO_SET = new Set(VERO_BRANDS.map(b => b.toLowerCase()));
-
-// Tier 1 & 2 brands — substring-matched against title AND brand field
-const HIGH_RISK_BRANDS = [
-  // Tier 1 — auto-remove on eBay
-  'Apple', 'Samsung', 'Sony', 'Microsoft', 'Google', 'Amazon',
-  'Nintendo', 'PlayStation', 'Xbox',
-  'Nike', 'Adidas', 'Under Armour', 'Puma', 'Reebok', 'New Balance', 'Jordan', 'Yeezy',
-  'Louis Vuitton', 'Gucci', 'Chanel', 'Prada', 'Hermès', 'Hermes', 'Burberry', 'Versace',
-  'Dior', 'Fendi', 'Balenciaga', 'Givenchy', 'Rolex', 'Cartier', 'Tiffany', 'Omega',
-  'TAG Heuer', 'Patek Philippe', 'Lego', 'Disney', 'Marvel', 'Star Wars', 'Pokemon',
-  'Pokémon', 'Hello Kitty', 'Sanrio', 'Barbie', 'Hot Wheels', 'Mattel', 'Hasbro',
-  // Tier 2 — high risk
-  'Bose', 'JBL', 'Beats', 'Dyson', 'LG', 'Panasonic', 'Canon', 'Nikon', 'GoPro',
-  'DJI', 'Garmin', 'Fitbit', 'North Face', 'Patagonia', 'Columbia', 'Lululemon',
-  'Ralph Lauren', 'Polo', 'Tommy Hilfiger', 'Calvin Klein', 'Lacoste', 'Oakley',
-  'Ray-Ban', 'MAC', 'Estée Lauder', 'Clinique', 'Urban Decay', 'Too Faced',
-  'Keurig', 'KitchenAid', 'Yeti', 'Hydroflask', 'Instant Pot', 'Vitamix', 'Ninja',
-  'Tesla', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Harley Davidson', 'Harley-Davidson',
-];
-
-export function handleCheckVero(
-  title: string,
-  brand: string
-): { blocked: boolean; reason: string } {
-  const titleLower = title.toLowerCase();
-  const brandLower = brand.toLowerCase().trim();
-
-  // Exact brand match against full VERO list
-  if (brandLower && VERO_SET.has(brandLower)) {
-    return { blocked: true, reason: `Protected brand: ${brand}` };
+export function handleCheckVero(title: string, brand: string): { blocked: boolean; reason: string } {
+  const veroSet = new Set(VERO_BRANDS.map(b => b.toLowerCase()));
+  if (veroSet.has(brand.toLowerCase())) {
+    return { blocked: true, reason: `Brand "${brand}" is on the VERO list` };
   }
-
-  // Tier 1 & 2 substring match in brand field or title
-  for (const pb of HIGH_RISK_BRANDS) {
-    const pbl = pb.toLowerCase();
-    if (brandLower.includes(pbl) || titleLower.includes(pbl)) {
-      return { blocked: true, reason: `VERO brand detected: ${pb}` };
+  const combined = (brand + ' ' + title).toLowerCase();
+  for (const risk of HIGH_RISK_BRANDS) {
+    if (combined.includes(risk.toLowerCase())) {
+      return { blocked: true, reason: `High-risk brand "${risk}" detected` };
     }
   }
-
   return { blocked: false, reason: '' };
 }
 
-// ─── Pending listing shape ─────────────────────────────────────────────────────
+// Maps tabId → resolver. Resolved when content script sends LISTING_COMPLETE.
+export const pendingListingResolvers: Map<number, (result: { success: boolean; error?: string }) => void> = new Map();
 
-interface PendingListing {
-  title: string;
-  description: string;
-  price: number;
-  condition: string;
-  quantity: number;
-  images: string[];
-  asin: string;
+export function resolveListingCompletion(tabId: number, result: { success: boolean; error?: string }): void {
+  const resolver = pendingListingResolvers.get(tabId);
+  if (resolver) {
+    pendingListingResolvers.delete(tabId);
+    resolver(result);
+  }
 }
-
-// ─── CREATE_EBAY_LISTING ───────────────────────────────────────────────────────
-// Uses ebayPrice directly — BulkLister already applied the markup from the slider.
-// The old handler passed ebayPrice into createListing() as the "Amazon cost"
-// which then applied a second 200% markup. This is the fix.
 
 export async function handleCreateEbayListing(payload: {
   asin: string;
@@ -76,46 +37,31 @@ export async function handleCreateEbayListing(payload: {
 }): Promise<{ success: boolean; error?: string }> {
   const { asin, ebayPrice, title, description, condition, quantity } = payload;
 
-  const pendingListing: PendingListing = {
-    title,
-    description: description || '',
-    price: ebayPrice,
-    condition: condition || 'New',
-    quantity: quantity || 1,
-    images: [],
-    asin,
-  };
-
-  await chrome.storage.local.set({ pendingListing });
-
-  // Open eBay's prelist page — content script auto-submits ASIN via Product ID tab.
-  // After eBay creates the draft, ebay-listing-creator.ts sets the price.
-  const tab = await chrome.tabs.create({
-    url: 'https://www.ebay.com/sl/prelist/home',
-    active: true,
+  await chrome.storage.local.set({
+    pendingListing: { title, description, price: ebayPrice, condition, quantity, images: [], asin }
   });
 
-  if (tab.id) {
-    const tabId = tab.id;
-    const onUpdated = (
-      updatedTabId: number,
-      changeInfo: chrome.tabs.TabChangeInfo
-    ) => {
-      if (updatedTabId === tabId && changeInfo.status === 'complete') {
-        chrome.tabs.onUpdated.removeListener(onUpdated);
-        // Give eBay's JS time to mount the form before injecting
-        setTimeout(() => {
-          chrome.tabs.sendMessage(tabId, {
-            type: 'FILL_LISTING',
-            payload: pendingListing,
-          }).catch(() => {
-            // Content script not ready — init() will pick it up from storage
-          });
-        }, 2500);
-      }
-    };
-    chrome.tabs.onUpdated.addListener(onUpdated);
-  }
+  // Pass title via URL param — eBay pre-fills the keyword search box.
+  // ebay-prelist.ts clicks Search → skips match → selects New → Continue to listing.
+  const tab = await chrome.tabs.create({
+    url: `https://www.ebay.com/sl/prelist/home?title=${encodeURIComponent(title)}`,
+    active: true,
+  });
+  const tabId = tab.id!;
 
-  return { success: true };
+  return new Promise<{ success: boolean; error?: string }>((resolve) => {
+    const TIMEOUT_MS = 90_000;
+
+    const timer = setTimeout(() => {
+      pendingListingResolvers.delete(tabId);
+      chrome.tabs.remove(tabId).catch(() => {});
+      resolve({ success: false, error: 'Listing timed out after 90 seconds' });
+    }, TIMEOUT_MS);
+
+    pendingListingResolvers.set(tabId, (result) => {
+      clearTimeout(timer);
+      chrome.tabs.remove(tabId).catch(() => {});
+      resolve(result);
+    });
+  });
 }

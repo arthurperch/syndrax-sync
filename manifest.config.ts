@@ -93,7 +93,7 @@ action: {
     },
     {
       matches: ['*://*.ebay.com/sh/lst/*', '*://*.ebay.com/sh/lst*', '*://*.ebay.com/mys/active*'],
-      js: ['src/content/ebay-sync-controller.ts', 'src/content/listing-optimizer.ts', 'src/content/ebay-inventory-scanner.ts'],
+      js: ['src/content/ebay-sync-controller.ts', 'src/content/listing-optimizer.ts', 'src/content/ebay-inventory-scanner.ts', 'src/content/ebay-listing-creator.ts'],
       run_at: 'document_end'
     },
     {

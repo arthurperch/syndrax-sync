@@ -115,8 +115,10 @@
     },
     {
       "js": [
-        "assets/ebay-sync-controller.ts-loader-81ffbea4.js",
-        "assets/listing-optimizer.ts-4ed993c7.js"
+        "assets/ebay-sync-controller.ts-loader-04fa555a.js",
+        "assets/listing-optimizer.ts-4ed993c7.js",
+        "assets/ebay-inventory-scanner.ts-d216a6e3.js",
+        "assets/ebay-listing-creator.ts-114e2069.js"
       ],
       "matches": [
         "*://*.ebay.com/sh/lst/*",
@@ -127,10 +129,21 @@
     },
     {
       "js": [
-        "assets/ebay-listing-creator.ts-64e7f279.js"
+        "assets/ebay-prelist.ts-eae48955.js"
+      ],
+      "matches": [
+        "*://*.ebay.com/sl/prelist*",
+        "*://*.ebay.com/sl/prelist/home*"
+      ],
+      "run_at": "document_end"
+    },
+    {
+      "js": [
+        "assets/ebay-listing-creator.ts-114e2069.js"
       ],
       "matches": [
         "*://*.ebay.com/sl/sell*",
+        "*://*.ebay.com/sell/list*",
         "*://*.ebay.com/sell/create*"
       ],
       "run_at": "document_end"
@@ -209,7 +222,7 @@
       ],
       "resources": [
         "assets/ebay-order-extractor.ts-87d4c536.js",
-        "assets/ebay-listing-creator.ts-64e7f279.js",
+        "assets/ebay-prelist.ts-eae48955.js",
         "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "use_dynamic_url": false
@@ -252,9 +265,11 @@
         "*://*.ebay.com/*"
       ],
       "resources": [
-        "assets/webhooks.config-1e7b2710.js",
-        "assets/ebay-sync-controller.ts-64601b91.js",
-        "assets/listing-optimizer.ts-4ed993c7.js"
+        "assets/webhooks.config-b8d9d01d.js",
+        "assets/ebay-sync-controller.ts-c7571258.js",
+        "assets/listing-optimizer.ts-4ed993c7.js",
+        "assets/ebay-inventory-scanner.ts-d216a6e3.js",
+        "assets/ebay-listing-creator.ts-114e2069.js"
       ],
       "use_dynamic_url": false
     },

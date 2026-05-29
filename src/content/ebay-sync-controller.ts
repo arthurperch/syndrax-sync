@@ -2136,7 +2136,7 @@ async function init() {
     return;
   }
 
-  // Guard: a listing is being created — don't hijack this tab with the sync
+  // Guard: don't run if listing creation is in progress
   const { pendingListing } = await chrome.storage.local.get('pendingListing');
   if (pendingListing) {
     console.log('[Syndrax Sync] Skipping sync — listing creation in progress');
@@ -2144,7 +2144,6 @@ async function init() {
   }
 
   console.log('[Syndrax Sync] eBay Active Listings page detected!');
-
   // Setup navigation blocker to prevent bad redirects
   setupNavigationBlocker();
   

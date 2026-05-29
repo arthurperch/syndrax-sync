@@ -264,11 +264,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // Auto-detect if we're on the active listings page and should scan
 async function init() {
   const url = window.location.href;
-
+  
   // Only auto-start if on the correct page
   if (url.includes('ebay.com/sh/lst/active') || url.includes('ebay.com/sh/lst?')) {
-    // Guard: if a listing is being created, this tab was opened by the bulk lister
-    // and the inventory scanner must not hijack it.
+    // Guard: don't run if listing creation is in progress
     const { pendingListing } = await chrome.storage.local.get('pendingListing');
     if (pendingListing) {
       console.log('[Syndrax Sync] Skipping auto-scan — listing creation in progress');

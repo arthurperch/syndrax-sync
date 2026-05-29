@@ -2,7 +2,7 @@ import { storage, type InventoryItem } from './services/storage';
 import type { Message } from './services/messaging';
 import { discord, sendDailySummaryWebhook } from './services/discord-logger';
 import { claimTrackingNumber, type ClaimParams } from './services/trackcaptain';
-import { handleCheckVero, handleCreateEbayListing } from './background/listing-handler';
+import { handleCheckVero, handleCreateEbayListing, resolveListingCompletion } from './background/listing-handler';
 
 // Helper to get next midnight timestamp
 function getNextMidnight(): number {
@@ -545,7 +545,7 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         }
       }
 
-      // ===== BULK LISTER: VERO CHECK =====
+      // ===== VERO CHECK =====
       if (msgType === 'CHECK_VERO') {
         const { title, brand } = message.payload as { title: string; brand: string };
         return handleCheckVero(title, brand);
@@ -553,15 +553,26 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
 
       // ===== BULK LISTER: CREATE EBAY LISTING =====
       if (msgType === 'CREATE_EBAY_LISTING') {
-        const payload = message.payload as {
+        return handleCreateEbayListing(message.payload as {
           asin: string;
           ebayPrice: number;
           title: string;
           description?: string;
           condition?: string;
           quantity?: number;
-        };
-        return handleCreateEbayListing(payload);
+        });
+      }
+
+      // ===== BULK LISTER: LISTING COMPLETE SIGNAL =====
+      // Sent by ebay-prelist.ts content script when eBay navigates away from prelist page.
+      // Routes the completion signal to the waiting promise in handleCreateEbayListing().
+      if (msgType === 'LISTING_COMPLETE') {
+        const tabId = sender.tab?.id;
+        if (tabId !== undefined) {
+          const result = message.payload as { success: boolean; error?: string };
+          resolveListingCompletion(tabId, result);
+        }
+        return { success: true };
       }
 
       return { success: false, error: 'Unknown message type' };

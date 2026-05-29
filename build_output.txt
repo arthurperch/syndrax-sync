@@ -1,0 +1,52 @@
+$ vite build
+[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2204 modules transformed.
+Generated an empty chunk: "customer-message-tool.ts".
+Generated an empty chunk: "listing-optimizer.ts".
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mservice-worker-loader.js                              [39m[1m[2m  0.05 kB[22m[1m[22m
+[2mdist/[22m[32micons/icon16.png                                      [39m[1m[2m  0.07 kB[22m[1m[22m
+[2mdist/[22m[32micons/icon32.png                                      [39m[1m[2m  0.07 kB[22m[1m[22m
+[2mdist/[22m[32micons/icon48.png                                      [39m[1m[2m  0.07 kB[22m[1m[22m
+[2mdist/[22m[32micons/icon128.png                                     [39m[1m[2m  0.07 kB[22m[1m[22m
+[2mdist/[22m[32mdashboard.html                                        [39m[1m[2m  0.34 kB[22m[1m[22m[2m Γöé gzip:  0.25 kB[22m
+[2mdist/[22m[32mbulklister.html                                       [39m[1m[2m  0.35 kB[22m[1m[22m[2m Γöé gzip:  0.25 kB[22m
+[2mdist/[22m[32massets/amazon-fulfillment.ts-loader-bd64dfee.js       [39m[1m[2m  0.35 kB[22m[1m[22m
+[2mdist/[22m[32massets/ebay-sync-controller.ts-loader-8caa417e.js     [39m[1m[2m  0.36 kB[22m[1m[22m
+[2mdist/[22m[32massets/finance-ebay-payment.ts-loader-61513f80.js     [39m[1m[2m  0.36 kB[22m[1m[22m
+[2mdist/[22m[32massets/finance-amazon-orders.ts-loader-f7505502.js    [39m[1m[2m  0.36 kB[22m[1m[22m
+[2mdist/[22m[32massets/ebay-mesh-order-overlay.ts-loader-a3371eb2.js  [39m[1m[2m  0.36 kB[22m[1m[22m
+[2mdist/[22m[32mindex.html                                            [39m[1m[2m  0.81 kB[22m[1m[22m[2m Γöé gzip:  0.38 kB[22m
+[2mdist/[22m[32mbutton1.mp3                                           [39m[1m[2m  3.07 kB[22m[1m[22m
+[2mdist/[22m[32mmanifest.json                                         [39m[1m[2m  6.86 kB[22m[1m[22m[2m Γöé gzip:  1.25 kB[22m
+[2mdist/[22m[35massets/dashboard-4ccbf758.css                         [39m[1m[2m 51.78 kB[22m[1m[22m[2m Γöé gzip:  9.03 kB[22m
+[2mdist/[22m[35massets/index-ebee2b22.css                             [39m[1m[2m 52.06 kB[22m[1m[22m[2m Γöé gzip:  9.09 kB[22m
+[2mdist/[22m[36massets/customer-message-tool.ts-4ed993c7.js           [39m[1m[2m  0.02 kB[22m[1m[22m[2m Γöé gzip:  0.04 kB[22m
+[2mdist/[22m[36massets/listing-optimizer.ts-4ed993c7.js               [39m[1m[2m  0.02 kB[22m[1m[22m[2m Γöé gzip:  0.04 kB[22m
+[2mdist/[22m[36massets/moneyParser-4edb8f1a.js                        [39m[1m[2m  0.30 kB[22m[1m[22m[2m Γöé gzip:  0.24 kB[22m
+[2mdist/[22m[36massets/webhooks.config-9ddb5e18.js                    [39m[1m[2m  0.97 kB[22m[1m[22m[2m Γöé gzip:  0.62 kB[22m
+[2mdist/[22m[36massets/aliexpress-price-checker.ts-dbf94a29.js        [39m[1m[2m  1.39 kB[22m[1m[22m[2m Γöé gzip:  0.75 kB[22m
+[2mdist/[22m[36massets/storage-15bd7ca1.js                            [39m[1m[2m  1.74 kB[22m[1m[22m[2m Γöé gzip:  0.74 kB[22m
+[2mdist/[22m[36massets/amazon-scraper.ts-cb9e63c1.js                  [39m[1m[2m  2.75 kB[22m[1m[22m[2m Γöé gzip:  1.33 kB[22m
+[2mdist/[22m[36massets/aliexpress-fulfillment.ts-e7692e87.js          [39m[1m[2m  3.15 kB[22m[1m[22m[2m Γöé gzip:  1.38 kB[22m
+[2mdist/[22m[36massets/competitor-research.ts-e97e1858.js             [39m[1m[2m  4.11 kB[22m[1m[22m[2m Γöé gzip:  1.75 kB[22m
+[2mdist/[22m[36massets/ebay-listing-creator.ts-64e7f279.js            [39m[1m[2m  4.14 kB[22m[1m[22m[2m Γöé gzip:  1.80 kB[22m
+[2mdist/[22m[36massets/finance-ebay-payment.ts-8df0979e.js            [39m[1m[2m  5.72 kB[22m[1m[22m[2m Γöé gzip:  2.11 kB[22m
+[2mdist/[22m[36massets/finance-amazon-orders.ts-4875d7db.js           [39m[1m[2m  5.94 kB[22m[1m[22m[2m Γöé gzip:  2.62 kB[22m
+[2mdist/[22m[36massets/ebay-order-extractor.ts-87d4c536.js            [39m[1m[2m  6.58 kB[22m[1m[22m[2m Γöé gzip:  2.72 kB[22m
+[2mdist/[22m[36massets/amazon-price-checker.ts-09266909.js            [39m[1m[2m  7.36 kB[22m[1m[22m[2m Γöé gzip:  2.71 kB[22m
+[2mdist/[22m[36massets/finance-ebay-scanner.ts-5c7dc805.js            [39m[1m[2m 15.81 kB[22m[1m[22m[2m Γöé gzip:  5.11 kB[22m
+[2mdist/[22m[36massets/amazon-fulfillment.ts-2713a60b.js              [39m[1m[2m 18.32 kB[22m[1m[22m[2m Γöé gzip:  5.87 kB[22m
+[2mdist/[22m[36massets/DescriptionBuilder-b4c7bdbf.js                 [39m[1m[2m 19.25 kB[22m[1m[22m[2m Γöé gzip:  5.83 kB[22m
+[2mdist/[22m[36massets/sniper-overlay.ts-a233e7bb.js                  [39m[1m[2m 20.91 kB[22m[1m[22m[2m Γöé gzip:  6.04 kB[22m
+[2mdist/[22m[36massets/bulklister-main-be0136eb.js                    [39m[1m[2m 21.40 kB[22m[1m[22m[2m Γöé gzip:  6.41 kB[22m
+[2mdist/[22m[36massets/ebay-mesh-order-overlay.ts-84ff6aac.js         [39m[1m[2m 27.29 kB[22m[1m[22m[2m Γöé gzip:  7.78 kB[22m
+[2mdist/[22m[36massets/ebay-sync-controller.ts-481d7296.js            [39m[1m[2m 51.55 kB[22m[1m[22m[2m Γöé gzip: 14.22 kB[22m
+[2mdist/[22m[36massets/dashboard-main-85318ac2.js                     [39m[1m[2m111.51 kB[22m[1m[22m[2m Γöé gzip: 21.59 kB[22m
+[2mdist/[22m[36massets/background-service.ts-9be64daa.js              [39m[1m[2m112.95 kB[22m[1m[22m[2m Γöé gzip: 42.04 kB[22m
+[2mdist/[22m[36massets/square-cfb8bc75.js                             [39m[1m[2m134.10 kB[22m[1m[22m[2m Γöé gzip: 44.31 kB[22m
+[2mdist/[22m[36massets/zap-a0d8e8b4.js                                [39m[1m[2m147.82 kB[22m[1m[22m[2m Γöé gzip: 47.15 kB[22m
+[2mdist/[22m[36massets/popup-372e24d2.js                              [39m[1m[2m151.62 kB[22m[1m[22m[2m Γöé gzip: 34.32 kB[22m
+[32mΓ£ô built in 8.85s[39m

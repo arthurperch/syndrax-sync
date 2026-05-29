@@ -1,133 +1,74 @@
 /**
- * BulkLister.tsx — Syndrax Sync Bulk Lister Full Page
- * Session E — standalone Chrome extension page (bulklister.html)
- * Dark neon theme, two-column layout, full business logic
+ * BulkLister.tsx — Syndrax Sync Bulk Lister
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   UploadCloud, Trash2, CheckCircle, XCircle, AlertTriangle,
-  Loader, ShieldCheck, ShieldOff, RefreshCw, X, Plus,
-  ChevronRight, Zap, BarChart3, PenTool, ChevronDown,
+  Loader, RefreshCw, X,
+  ChevronRight, Zap, BarChart3, Play, Pause, Square,
+  Settings, TrendingUp, List, ChevronDown, Download, ExternalLink,
 } from 'lucide-react';
-import DescriptionBuilder from '../components/DescriptionBuilder';
-import type { DescProductData } from '../components/DescriptionBuilder';
+import {
+  bulkEngine,
+  type AsinJob,
+  type AsinStatus,
+  type BulkEngineConfig,
+  type BulkEngineState,
+  type ListingType,
+  type EngineEvent,
+} from '../services/bulk-listing-engine';
+import { getErrorSummary } from '../services/error-tracker';
+import { downloadBulkUploadTemplate, type BulkUploadRow } from '../services/excel-generator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ItemStatus = 'PENDING' | 'CHECKING' | 'CLEAR' | 'BLOCKED' | 'LISTED' | 'ERROR';
-
-interface VeroResult {
-  blocked: boolean;
-  reason: string;
-}
-
-interface QueueItem {
+interface ParsedEntry {
   asin: string;
-  status: ItemStatus;
-  title?: string;
-  price?: number;
-  brand?: string;
-  image?: string;
-  ebayPrice?: number;
-  veroResult?: VeroResult;
-  error?: string;
-  description?: string;
+  sourceUrl?: string;
 }
 
-interface AmazonProductResult {
-  title?: string;
-  price?: number;
-  brand?: string;
-  image?: string;
-  error?: string;
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-interface VeroCheckResult {
-  blocked: boolean;
-  reason: string;
-}
+function parseASINs(text: string): ParsedEntry[] {
+  const found = new Map<string, string>();
 
-interface ListResult {
-  success: boolean;
-  error?: string;
-}
-
-// ─── Business Logic ───────────────────────────────────────────────────────────
-
-/**
- * Extracts valid 10-char ASINs from pasted text.
- * Handles: bare ASINs, amazon.com/dp/ASIN, amazon.com/gp/product/ASIN
- */
-function parseASINs(text: string): string[] {
-  const found = new Set<string>();
-
-  // Match amazon URL patterns first
   const urlPattern = /amazon\.com\/(?:dp|gp\/product)\/([A-Z0-9]{10})/gi;
   let match: RegExpExecArray | null;
   while ((match = urlPattern.exec(text)) !== null) {
-    found.add(match[1].toUpperCase());
+    const asin = match[1].toUpperCase();
+    if (!found.has(asin)) found.set(asin, match[0]);
   }
 
-  // Match bare ASINs (10 chars, alphanumeric, typically starts with B0 or is all digits)
+  const urlStripped = text.replace(/https?:\/\/[^\s]*/g, '');
   const asinPattern = /\b([A-Z0-9]{10})\b/g;
-  const urlStripped = text.replace(/https?:\/\/[^\s]*/g, ''); // avoid re-matching URL fragments
   while ((match = asinPattern.exec(urlStripped)) !== null) {
     const candidate = match[1].toUpperCase();
-    // Valid ASIN: starts with B or is all digits, 10 chars
-    if (/^[A-Z0-9]{10}$/.test(candidate)) {
-      found.add(candidate);
+    if (/^[A-Z0-9]{10}$/.test(candidate) && !found.has(candidate)) {
+      found.set(candidate, '');
     }
   }
 
-  return Array.from(found);
+  return Array.from(found.entries()).map(([asin, url]) => ({ asin, sourceUrl: url || undefined }));
 }
 
-/**
- * Enforces markup based on account age schedule from BUSINESS_RULES.
- * User can go above the schedule minimum but never below it.
- * Hard floor: 10%.
- */
-function enforceMarkup(accountAgeWeeks: number, requestedMarkup: number): number {
+function enforceMarkup(accountAgeWeeks: number, requested: number): number {
   const scheduleMin =
     accountAgeWeeks <= 2  ? 40 :
     accountAgeWeeks <= 4  ? 60 :
     accountAgeWeeks <= 6  ? 70 :
     accountAgeWeeks <= 8  ? 80 :
     accountAgeWeeks <= 10 ? 90 : 100;
-
-  const hardFloor = 10;
-  const effectiveMin = Math.max(scheduleMin, hardFloor);
-  return Math.max(effectiveMin, requestedMarkup);
+  return Math.max(Math.max(scheduleMin, 10), requested);
 }
 
-/**
- * Returns the schedule minimum markup for a given account age.
- */
-function getScheduleMin(accountAgeWeeks: number): number {
-  if (accountAgeWeeks <= 2)  return 40;
-  if (accountAgeWeeks <= 4)  return 60;
-  if (accountAgeWeeks <= 6)  return 70;
-  if (accountAgeWeeks <= 8)  return 80;
-  if (accountAgeWeeks <= 10) return 90;
+function getScheduleMin(weeks: number): number {
+  if (weeks <= 2)  return 40;
+  if (weeks <= 4)  return 60;
+  if (weeks <= 6)  return 70;
+  if (weeks <= 8)  return 80;
+  if (weeks <= 10) return 90;
   return 100;
-}
-
-/**
- * Calculates eBay price from Amazon price + markup %.
- * markup=100 means 2x (100% above cost).
- */
-function calcEbayPrice(amazonPrice: number, markupPct: number): number {
-  return amazonPrice * (1 + markupPct / 100);
-}
-
-// ─── Chrome helpers ───────────────────────────────────────────────────────────
-
-async function sendMsg<T = unknown>(type: string, payload?: unknown): Promise<T | null> {
-  try {
-    if (typeof chrome === 'undefined' || !chrome.runtime) return null;
-    return await chrome.runtime.sendMessage({ type, payload }) as T;
-  } catch { return null; }
 }
 
 async function storageGet<T>(key: string): Promise<T | null> {
@@ -142,10 +83,41 @@ async function storageSet(key: string, value: unknown): Promise<void> {
   try {
     if (typeof chrome === 'undefined' || !chrome.storage) return;
     await chrome.storage.local.set({ [key]: value });
-  } catch { /* noop */ }
+  } catch {}
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Status badge ─────────────────────────────────────────────────────────────
+
+const STATUS_MAP: Record<AsinStatus, { label: string; cls: string }> = {
+  PENDING:    { label: 'PENDING',    cls: 'border-slate-500/40 bg-slate-500/10 text-slate-400' },
+  FETCHING:   { label: 'FETCHING',   cls: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-300' },
+  VERO_CHECK: { label: 'VERO',       cls: 'border-blue-400/40 bg-blue-400/10 text-blue-300' },
+  PRICING:    { label: 'PRICING',    cls: 'border-indigo-400/40 bg-indigo-400/10 text-indigo-300' },
+  LISTING:    { label: 'LISTING',    cls: 'border-violet-400/40 bg-violet-400/10 text-violet-300' },
+  LISTED:     { label: 'LISTED',     cls: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300' },
+  BLOCKED:    { label: 'BLOCKED',    cls: 'border-red-400/40 bg-red-400/10 text-red-300' },
+  ERROR:      { label: 'ERROR',      cls: 'border-amber-400/40 bg-amber-400/10 text-amber-300' },
+  SKIPPED:    { label: 'SKIPPED',    cls: 'border-slate-400/40 bg-slate-400/10 text-slate-400' },
+};
+
+function StatusBadge({ status }: { status: AsinStatus }) {
+  const { label, cls } = STATUS_MAP[status] ?? STATUS_MAP.PENDING;
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-widest ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function StatusIcon({ status }: { status: AsinStatus }) {
+  if (status === 'FETCHING' || status === 'VERO_CHECK' || status === 'PRICING' || status === 'LISTING')
+    return <Loader className="h-3.5 w-3.5 text-cyan-400 animate-spin shrink-0" />;
+  if (status === 'LISTED')   return <CheckCircle className="h-3.5 w-3.5 text-fuchsia-400 shrink-0" />;
+  if (status === 'BLOCKED')  return <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />;
+  if (status === 'ERROR')    return <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />;
+  if (status === 'SKIPPED')  return <X className="h-3.5 w-3.5 text-slate-500 shrink-0" />;
+  return <div className="h-3.5 w-3.5 rounded-full border border-slate-600 shrink-0" />;
+}
 
 function SyndraxLogoMark() {
   return (
@@ -167,71 +139,102 @@ function SyndraxLogoMark() {
   );
 }
 
-function StatusBadge({ status }: { status: ItemStatus }) {
-  const map: Record<ItemStatus, { label: string; cls: string }> = {
-    PENDING:  { label: 'PENDING',  cls: 'border-slate-500/40 bg-slate-500/10 text-slate-400' },
-    CHECKING: { label: 'CHECKING', cls: 'border-cyan-400/40 bg-cyan-400/10 text-cyan-300' },
-    CLEAR:    { label: 'CLEAR',    cls: 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' },
-    BLOCKED:  { label: 'BLOCKED',  cls: 'border-red-400/40 bg-red-400/10 text-red-300' },
-    LISTED:   { label: 'LISTED',   cls: 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300' },
-    ERROR:    { label: 'ERROR',    cls: 'border-amber-400/40 bg-amber-400/10 text-amber-300' },
-  };
-  const { label, cls } = map[status];
-  return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-widest ${cls}`}>
-      {label}
-    </span>
-  );
-}
+// ─── Listing type button ──────────────────────────────────────────────────────
 
-function StatusIcon({ status }: { status: ItemStatus }) {
-  if (status === 'CHECKING') return <Loader className="h-3.5 w-3.5 text-cyan-400 animate-spin shrink-0" />;
-  if (status === 'CLEAR')    return <CheckCircle className="h-3.5 w-3.5 text-emerald-400 shrink-0" />;
-  if (status === 'BLOCKED')  return <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />;
-  if (status === 'LISTED')   return <CheckCircle className="h-3.5 w-3.5 text-fuchsia-400 shrink-0" />;
-  if (status === 'ERROR')    return <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />;
-  return <div className="h-3.5 w-3.5 rounded-full border border-slate-600 shrink-0" />;
-}
+const LISTING_TYPES: { id: ListingType; label: string; desc: string }[] = [
+  { id: 'standard', label: 'Standard',  desc: 'Fast, basic listing' },
+  { id: 'opti',     label: 'Opti-List', desc: 'Optimized title + bullets' },
+  { id: 'chat',     label: 'Chat-List', desc: 'AI-written description' },
+  { id: 'seo',      label: 'SEO-List',  desc: 'SEO-optimized full listing' },
+];
+
+// ─── Listing mode ─────────────────────────────────────────────────────────────
+
+type ListingMode = 'prelist' | 'bulk-upload';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BulkLister() {
-  // Input state
-  const [rawInput, setRawInput] = useState('');
-  const [parsedASINs, setParsedASINs] = useState<string[]>([]);
-  const [parseMsg, setParseMsg] = useState('');
+  // ── Input ──────────────────────────────────────────────────────────────────
+  const [rawInput, setRawInput]     = useState('');
+  const [parsedEntries, setParsedEntries] = useState<ParsedEntry[]>([]);
+  const [parseMsg, setParseMsg]     = useState('');
 
-  // Settings
+  // ── Settings ───────────────────────────────────────────────────────────────
   const [accountAgeWeeks, setAccountAgeWeeks] = useState(1);
-  const [markup, setMarkup] = useState(100);
-  const [veroEnabled, setVeroEnabled] = useState(true);
+  const [markup, setMarkup]         = useState(100);
+  const [threads, setThreads]       = useState(3);
+  const [listingType, setListingType] = useState<ListingType>('standard');
+  const [minPrice, setMinPrice]     = useState(0);
+  const [maxPrice, setMaxPrice]     = useState(0);
+  const [fbaOnly, setFbaOnly]       = useState(false);
+  const [closeErrors, setCloseErrors] = useState(true);
+  const [maxRetries, setMaxRetries] = useState(2);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Queue
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [batchRunning, setBatchRunning] = useState(false);
-  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
-  const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
+  // ── Engine state (mirrored from bulkEngine) ────────────────────────────────
+  const [engineStatus, setEngineStatus] = useState<BulkEngineState['status']>('IDLE');
+  const [jobs, setJobs]             = useState<AsinJob[]>([]);
+  const [progress, setProgress]     = useState({ listed: 0, errors: 0, blocked: 0, skipped: 0, position: 0 });
 
-  // Daily counter
+  // ── Daily limit ────────────────────────────────────────────────────────────
   const [dailyCount, setDailyCount] = useState(0);
-  const [dailyWarning, setDailyWarning] = useState('');
-
   const DAILY_LIMIT = 100;
 
-  // Derived
-  const scheduleMin = getScheduleMin(accountAgeWeeks);
+  // ── Error summary ──────────────────────────────────────────────────────────
+  const [errorSummary, setErrorSummary] = useState<Record<string, number>>({});
+  const [expandedAsin, setExpandedAsin] = useState<string | null>(null);
+
+  // ── Listing mode ───────────────────────────────────────────────────────────
+  const [listingMode, setListingMode] = useState<ListingMode>('bulk-upload');
+
+  // ── Description builder ────────────────────────────────────────────────────
+  const [descBuilderAsin, setDescBuilderAsin] = useState<string | null>(null);
+
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const scheduleMin    = getScheduleMin(accountAgeWeeks);
   const effectiveMarkup = enforceMarkup(accountAgeWeeks, markup);
-  const previewEbayPrice = calcEbayPrice(20, effectiveMarkup);
+  const totalJobs      = jobs.length;
+  const listedCount    = jobs.filter(j => j.status === 'LISTED').length;
+  const errorCount     = jobs.filter(j => j.status === 'ERROR').length;
+  const blockedCount   = jobs.filter(j => j.status === 'BLOCKED').length;
+  const pendingCount   = jobs.filter(j => j.status === 'PENDING').length;
+  const progressPct    = totalJobs > 0 ? Math.round((listedCount / totalJobs) * 100) : 0;
+  const isRunning      = engineStatus === 'RUNNING';
+  const isPaused       = engineStatus === 'PAUSED';
+  const isActive       = isRunning || isPaused;
 
-  // Summary counts
-  const listed  = queue.filter(i => i.status === 'LISTED').length;
-  const blocked = queue.filter(i => i.status === 'BLOCKED').length;
-  const errors  = queue.filter(i => i.status === 'ERROR').length;
-  const estProfit = queue
-    .filter(i => i.status === 'LISTED' && i.price && i.ebayPrice)
-    .reduce((sum, i) => sum + ((i.ebayPrice ?? 0) - (i.price ?? 0)), 0);
+  // ─── Subscribe to engine events ───────────────────────────────────────────
 
-  // ─── On mount: daily counter reset + load queue ──────────────────────────
+  useEffect(() => {
+    const unsub = bulkEngine.on((event: EngineEvent) => {
+      if (event.type === 'ENGINE_STATUS' && event.state?.status) {
+        setEngineStatus(event.state.status);
+      }
+      if (event.type === 'JOB_UPDATE' && event.job) {
+        setJobs(prev => {
+          const idx = prev.findIndex(j => j.asin === event.job!.asin);
+          if (idx === -1) return [...prev, event.job!];
+          const next = [...prev];
+          next[idx] = event.job!;
+          return next;
+        });
+      }
+      if (event.type === 'PROGRESS' && event.state) {
+        setProgress(p => ({ ...p, ...event.state }));
+        setErrorSummary(getErrorSummary());
+      }
+      if (event.type === 'COMPLETE') {
+        setEngineStatus('COMPLETE');
+        setErrorSummary(getErrorSummary());
+        // Update daily count
+        storageGet<number>('bulk_listed_today').then(c => setDailyCount(c ?? 0));
+      }
+    });
+    return unsub;
+  }, []);
+
+  // ─── On mount: load daily counter + restore engine state ─────────────────
 
   useEffect(() => {
     const init = async () => {
@@ -242,644 +245,633 @@ export default function BulkLister() {
         await storageSet('bulk_listed_date', today);
         setDailyCount(0);
       } else {
-        const count = await storageGet<number>('bulk_listed_today');
-        setDailyCount(count ?? 0);
+        const count = await storageGet<number>('bulk_listed_today') ?? 0;
+        setDailyCount(count);
       }
 
-      // Load persisted queue
-      const savedQueue = await storageGet<QueueItem[]>('bulk_queue');
-      if (savedQueue && savedQueue.length > 0) {
-        // Reset any mid-flight statuses from previous session
-        const restored = savedQueue.map(item =>
-          item.status === 'CHECKING' ? { ...item, status: 'PENDING' as ItemStatus } : item
-        );
-        setQueue(restored);
+      // Restore engine state if paused/stopped mid-run
+      const saved = bulkEngine.getState();
+      if (saved.status === 'PAUSED' || saved.status === 'STOPPED') {
+        setEngineStatus(saved.status);
+        setJobs(saved.jobs);
+        setProgress({
+          listed: saved.listed,
+          errors: saved.errors,
+          blocked: saved.blocked,
+          skipped: saved.skipped,
+          position: saved.position,
+        });
       }
     };
     init();
   }, []);
 
-  // ─── Persist queue on change ─────────────────────────────────────────────
-
-  const queueRef = useRef(queue);
-  queueRef.current = queue;
-
-  useEffect(() => {
-    storageSet('bulk_queue', queue);
-  }, [queue]);
-
-  // ─── Markup enforcement: clamp slider when account age changes ───────────
+  // ─── Markup enforcement ───────────────────────────────────────────────────
 
   useEffect(() => {
     const min = getScheduleMin(accountAgeWeeks);
-    if (markup < min) {
-      setMarkup(min);
-    }
+    if (markup < min) setMarkup(min);
   }, [accountAgeWeeks]);
 
-  // ─── Parse ASINs ─────────────────────────────────────────────────────────
+  // ─── Parse ────────────────────────────────────────────────────────────────
 
   const handleParse = useCallback(() => {
     if (!rawInput.trim()) {
       setParseMsg('Paste Amazon URLs or ASINs above');
-      setParsedASINs([]);
+      setParsedEntries([]);
       return;
     }
-    const asins = parseASINs(rawInput);
-    setParsedASINs(asins);
-    if (asins.length === 0) {
-      setParseMsg('No valid ASINs found — paste Amazon URLs or bare ASINs');
-    } else {
-      setParseMsg(`Found ${asins.length} ASIN${asins.length !== 1 ? 's' : ''}`);
-    }
+    const entries = parseASINs(rawInput);
+    setParsedEntries(entries);
+    setParseMsg(
+      entries.length === 0
+        ? 'No valid ASINs found — paste Amazon URLs or bare ASINs'
+        : `Found ${entries.length} ASIN${entries.length !== 1 ? 's' : ''}`
+    );
   }, [rawInput]);
 
-  // ─── VERO check ──────────────────────────────────────────────────────────
+  // ─── Start bulk run ───────────────────────────────────────────────────────
 
-  const checkVERO = useCallback(async (title: string, brand: string): Promise<VeroCheckResult> => {
-    if (!veroEnabled) return { blocked: false, reason: '' };
-    const result = await sendMsg<VeroCheckResult>('CHECK_VERO', { title, brand });
-    return result ?? { blocked: false, reason: '' };
-  }, [veroEnabled]);
-
-  // ─── Queue single item ───────────────────────────────────────────────────
-
-  const queueItem = useCallback(async (asin: string) => {
-    // Set to CHECKING
-    setQueue(prev => prev.map(item =>
-      item.asin === asin ? { ...item, status: 'CHECKING' } : item
-    ));
-
-    // Fetch Amazon product data
-    const productData = await sendMsg<AmazonProductResult>('FETCH_AMAZON_PRODUCT', { asin });
-
-    if (!productData || productData.error) {
-      setQueue(prev => prev.map(item =>
-        item.asin === asin
-          ? { ...item, status: 'ERROR', error: productData?.error ?? 'Failed to fetch product' }
-          : item
-      ));
-      return;
-    }
-
-    const { title = '', price = 0, brand = '', image = '' } = productData;
-    const ebayPrice = calcEbayPrice(price, effectiveMarkup);
-
-    // VERO check
-    const veroResult = await checkVERO(title, brand);
-
-    const newStatus: ItemStatus = veroResult.blocked ? 'BLOCKED' : 'CLEAR';
-
-    setQueue(prev => prev.map(item =>
-      item.asin === asin
-        ? { ...item, status: newStatus, title, price, brand, image, ebayPrice, veroResult }
-        : item
-    ));
-  }, [effectiveMarkup, checkVERO]);
-
-  // ─── List single item ────────────────────────────────────────────────────
-
-  const listItem = useCallback(async (asin: string, ebayPrice: number, title: string): Promise<boolean> => {
-    // Check daily cap
-    const currentCount = await storageGet<number>('bulk_listed_today') ?? 0;
-    if (currentCount >= DAILY_LIMIT) {
-      setDailyWarning(`Daily limit of ${DAILY_LIMIT} listings reached. Try again tomorrow.`);
-      return false;
-    }
-
-    const queuedItem = queue.find(i => i.asin === asin);
-    const result = await sendMsg<ListResult>('CREATE_EBAY_LISTING', {
-      asin,
-      ebayPrice,
-      title,
-      description: queuedItem?.description,
-      condition: 'New',
-      quantity: 1,
-    });
-
-    if (result?.success) {
-      const newCount = currentCount + 1;
-      await storageSet('bulk_listed_today', newCount);
-      setDailyCount(newCount);
-
-      setQueue(prev => prev.map(item =>
-        item.asin === asin ? { ...item, status: 'LISTED' } : item
-      ));
-
-      if (newCount >= DAILY_LIMIT) {
-        setDailyWarning(`Daily limit of ${DAILY_LIMIT} listings reached.`);
-      }
-      return true;
-    } else {
-      setQueue(prev => prev.map(item =>
-        item.asin === asin ? { ...item, status: 'ERROR', error: result?.error ?? 'Listing failed' } : item
-      ));
-      return false;
-    }
-  }, []);
-
-  // ─── Queue All ───────────────────────────────────────────────────────────
-
-  const handleQueueAll = useCallback(async () => {
-    if (parsedASINs.length === 0) {
+  const handleStart = useCallback(async () => {
+    if (parsedEntries.length === 0) {
       setParseMsg('Parse ASINs first');
       return;
     }
-
-    // Add new ASINs to queue (skip duplicates already in queue)
-    const existingAsins = new Set(queue.map(i => i.asin));
-    const newItems: QueueItem[] = parsedASINs
-      .filter(asin => !existingAsins.has(asin))
-      .map(asin => ({ asin, status: 'PENDING' as ItemStatus }));
-
-    if (newItems.length === 0) {
-      setParseMsg('All ASINs already in queue');
+    if (dailyCount >= DAILY_LIMIT) {
+      setParseMsg(`Daily limit of ${DAILY_LIMIT} reached`);
       return;
     }
 
-    setQueue(prev => [...prev, ...newItems]);
-    setParseMsg(`Added ${newItems.length} item${newItems.length !== 1 ? 's' : ''} to queue`);
+    const config: Partial<BulkEngineConfig> = {
+      threads,
+      listingType,
+      markupPct: effectiveMarkup,
+      minPrice,
+      maxPrice,
+      fbaOnly,
+      closeErrorTabs: closeErrors,
+      maxRetries,
+      dailyLimit: DAILY_LIMIT - dailyCount,
+    };
 
-    // Auto-check each new item
-    for (const item of newItems) {
-      await queueItem(item.asin);
-    }
-  }, [parsedASINs, queue, queueItem]);
+    const asins = parsedEntries.map(e => e.asin);
+    setJobs(asins.map(asin => ({ asin, status: 'PENDING', retries: 0 })));
+    setProgress({ listed: 0, errors: 0, blocked: 0, skipped: 0, position: 0 });
+    setEngineStatus('RUNNING');
 
-  // ─── List All CLEAR items ────────────────────────────────────────────────
+    await bulkEngine.start(asins, config);
+  }, [parsedEntries, threads, listingType, effectiveMarkup, minPrice, maxPrice, fbaOnly, closeErrors, maxRetries, dailyCount]);
 
-  const handleListAll = useCallback(async () => {
-    const clearItems = queue.filter(i => i.status === 'CLEAR' && i.ebayPrice && i.title);
-    if (clearItems.length === 0) return;
+  // ─── Pause / Resume / Stop ────────────────────────────────────────────────
 
-    setBatchRunning(true);
-    setBatchProgress({ done: 0, total: clearItems.length });
-    setDailyWarning('');
-
-    for (let i = 0; i < clearItems.length; i++) {
-      const item = clearItems[i];
-      const ok = await listItem(item.asin, item.ebayPrice!, item.title!);
-      setBatchProgress({ done: i + 1, total: clearItems.length });
-      if (!ok && dailyCount >= DAILY_LIMIT) break;
-    }
-
-    setBatchRunning(false);
-  }, [queue, listItem, dailyCount]);
-
-  // ─── Remove item ─────────────────────────────────────────────────────────
-
-  const removeItem = useCallback((asin: string) => {
-    setQueue(prev => prev.filter(i => i.asin !== asin));
+  const handlePause = useCallback(() => {
+    bulkEngine.pause();
   }, []);
 
-  // ─── Clear all ───────────────────────────────────────────────────────────
-
-  const clearAll = useCallback(() => {
-    setQueue([]);
-    storageSet('bulk_queue', []);
+  const handleResume = useCallback(() => {
+    bulkEngine.unpause();
   }, []);
 
-  // ─── Recheck item ────────────────────────────────────────────────────────
+  const handleStop = useCallback(() => {
+    bulkEngine.stop();
+  }, []);
 
-  const recheckItem = useCallback(async (asin: string) => {
-    setQueue(prev => prev.map(item =>
-      item.asin === asin ? { ...item, status: 'PENDING' } : item
-    ));
-    await queueItem(asin);
-  }, [queueItem]);
+  const handleResumeFromStorage = useCallback(async () => {
+    await bulkEngine.resume();
+  }, []);
+
+  // ─── Clear queue ──────────────────────────────────────────────────────────
+
+  const handleClear = useCallback(() => {
+    if (isActive) return;
+    setJobs([]);
+    setParsedEntries([]);
+    setRawInput('');
+    setParseMsg('');
+    setProgress({ listed: 0, errors: 0, blocked: 0, skipped: 0, position: 0 });
+    setEngineStatus('IDLE');
+  }, [isActive]);
+
+  // ─── Remove single job ────────────────────────────────────────────────────
+
+  const handleRemoveJob = useCallback((asin: string) => {
+    if (isActive) return;
+    setJobs(prev => prev.filter(j => j.asin !== asin));
+    setParsedEntries(prev => prev.filter(e => e.asin !== asin));
+  }, [isActive]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-screen min-h-screen bg-[#02050f] text-white font-sans">
-      {/* Background layers */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_85%_15%,rgba(217,70,239,0.10),transparent_30%),radial-gradient(circle_at_50%_90%,rgba(37,99,235,0.10),transparent_35%)] pointer-events-none" />
-      <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
-
-      {/* Top shimmer */}
-      <div className="fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent z-10" />
-
-      <div className="relative min-h-screen grid grid-cols-[420px_1fr]">
-
-        {/* ═══════════════════════════════════════════════════════
-            LEFT COLUMN — Input & Controls
-        ═══════════════════════════════════════════════════════ */}
-        <aside className="border-r border-white/[0.07] flex flex-col min-h-screen">
-
-          {/* Header */}
-          <div className="border-b border-white/[0.07] px-5 py-4">
-            <div className="flex items-center gap-3 mb-1">
-              <SyndraxLogoMark />
-              <div>
-                <h1 className="text-lg font-semibold tracking-wide bg-gradient-to-r from-cyan-300 via-blue-300 to-fuchsia-300 bg-clip-text text-transparent">
-                  Bulk Lister
-                </h1>
-                <p className="text-[10px] text-slate-500 tracking-[0.1em]">Phase 6 — eBay listing engine</p>
-              </div>
-              <div className="ml-auto flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
-                <span className="text-[10px] text-emerald-300 font-medium">Live</span>
-              </div>
+    <div className="min-h-screen bg-[#0a0d14] text-slate-100 font-sans">
+      {/* ── Header ── */}
+      <header className="sticky top-0 z-20 border-b border-slate-800/60 bg-[#0a0d14]/95 backdrop-blur px-6 py-3 flex items-center gap-3">
+        <SyndraxLogoMark />
+        <div>
+          <h1 className="text-sm font-bold tracking-wide text-white">Syndrax Bulk Lister</h1>
+          <p className="text-[10px] text-slate-500">Amazon → eBay automation engine</p>
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          {/* Daily counter */}
+          <div className="text-right">
+            <div className="text-[10px] text-slate-500">Daily</div>
+            <div className={`text-xs font-bold ${dailyCount >= DAILY_LIMIT ? 'text-red-400' : 'text-emerald-400'}`}>
+              {dailyCount}/{DAILY_LIMIT}
             </div>
           </div>
+          {/* Engine status pill */}
+          <span className={`rounded-full px-3 py-1 text-[10px] font-semibold tracking-widest border ${
+            isRunning  ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300' :
+            isPaused   ? 'border-amber-400/40 bg-amber-400/10 text-amber-300' :
+            engineStatus === 'COMPLETE' ? 'border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300' :
+            engineStatus === 'STOPPED'  ? 'border-red-400/40 bg-red-400/10 text-red-300' :
+            'border-slate-600/40 bg-slate-600/10 text-slate-400'
+          }`}>
+            {engineStatus}
+          </span>
+        </div>
+      </header>
 
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 [scrollbar-width:thin] [scrollbar-color:rgba(34,211,238,0.3)_transparent]">
+      <div className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
 
-            {/* ASIN / URL Input */}
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] text-slate-500 block">
-                Amazon URLs or ASINs
-              </label>
-              <textarea
-                value={rawInput}
-                onChange={e => setRawInput(e.target.value)}
-                rows={7}
-                placeholder={`Paste one per line:\nhttps://amazon.com/dp/B08N5WRWNW\nB07XJ8C8F5\nhttps://amazon.com/gp/product/B09G9FPHY6`}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs text-slate-300 placeholder:text-slate-600 outline-none focus:border-cyan-400/40 resize-none font-mono leading-relaxed [scrollbar-width:thin]"
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleParse}
-                  className="flex items-center gap-2 rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-medium text-cyan-200 transition hover:bg-cyan-400/20"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Parse ASINs
-                </button>
-                {parseMsg && (
-                  <span className={`text-[11px] ${parsedASINs.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {parseMsg}
-                  </span>
-                )}
-              </div>
-              {parsedASINs.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto [scrollbar-width:thin]">
-                  {parsedASINs.map(asin => (
-                    <span key={asin} className="rounded-md border border-cyan-400/20 bg-cyan-400/5 px-2 py-0.5 text-[10px] font-mono text-cyan-300">
-                      {asin}
-                    </span>
-                  ))}
-                </div>
-              )}
+        {/* ── LEFT COLUMN ── */}
+        <div className="space-y-5">
+
+          {/* Input card */}
+          <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <UploadCloud className="h-4 w-4 text-cyan-400" />
+              <h2 className="text-sm font-semibold text-white">Paste Amazon Links / ASINs</h2>
             </div>
-
-            {/* Account Settings */}
-            <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 space-y-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">Account Settings</p>
-
-              {/* Account Age */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-slate-400">Account Age</label>
-                  <span className="text-xs font-semibold text-cyan-300">
-                    Week {accountAgeWeeks}
-                    <span className="text-slate-500 font-normal ml-1">
-                      (min {scheduleMin}% markup)
-                    </span>
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={52}
-                  value={accountAgeWeeks}
-                  onChange={e => setAccountAgeWeeks(Math.max(1, Math.min(52, Number(e.target.value))))}
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 outline-none focus:border-cyan-400/40"
-                />
-              </div>
-
-              {/* Markup Slider */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs text-slate-400">Markup %</label>
-                  <span className="text-xs font-semibold text-fuchsia-300">{effectiveMarkup}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={scheduleMin}
-                  max={300}
-                  step={5}
-                  value={markup}
-                  onChange={e => setMarkup(Number(e.target.value))}
-                  className="w-full accent-fuchsia-400"
-                />
-                <div className="flex justify-between text-[10px] text-slate-600">
-                  <span>Min {scheduleMin}%</span>
-                  <span>300%</span>
-                </div>
-              </div>
-
-              {/* Price Preview */}
-              <div className="rounded-lg border border-fuchsia-400/20 bg-fuchsia-400/5 px-3 py-2">
-                <p className="text-[10px] text-slate-500 mb-0.5">Preview: $20.00 Amazon item</p>
-                <p className="text-sm font-semibold text-fuchsia-300">
-                  → ${previewEbayPrice.toFixed(2)} on eBay
-                  <span className="text-[10px] text-slate-500 font-normal ml-2">
-                    (+${(previewEbayPrice - 20).toFixed(2)} profit)
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Compliance Toggle */}
-            <div className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3">
-              <div className="flex items-center gap-2">
-                {veroEnabled
-                  ? <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  : <ShieldOff className="h-4 w-4 text-slate-500" />
-                }
-                <div>
-                  <p className="text-xs font-medium text-slate-200">VERO Check</p>
-                  <p className="text-[10px] text-slate-500">3,205 protected brands</p>
-                </div>
-              </div>
+            <textarea
+              className="w-full h-28 rounded-lg bg-slate-800/60 border border-slate-700/50 px-3 py-2 text-xs text-slate-200 placeholder-slate-600 resize-none focus:outline-none focus:border-cyan-500/50 font-mono"
+              placeholder="https://www.amazon.com/dp/B08N5WRWNW&#10;B09G9FPHY6&#10;https://amazon.com/gp/product/B07XJ8C8F5"
+              value={rawInput}
+              onChange={e => setRawInput(e.target.value)}
+              disabled={isActive}
+            />
+            <div className="flex items-center gap-2 mt-2">
               <button
-                onClick={() => setVeroEnabled(v => !v)}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${veroEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                onClick={handleParse}
+                disabled={isActive}
+                className="flex items-center gap-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 px-3 py-1.5 text-xs font-semibold text-cyan-300 hover:bg-cyan-500/20 disabled:opacity-40 transition-colors"
               >
-                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${veroEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                <ChevronRight className="h-3.5 w-3.5" />
+                Parse ASINs
               </button>
-            </div>
-
-            {/* Daily Limit */}
-            <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-slate-300">Daily Listings</p>
-                <span className={`text-xs font-semibold ${dailyCount >= DAILY_LIMIT ? 'text-red-400' : dailyCount >= 80 ? 'text-amber-400' : 'text-cyan-300'}`}>
-                  {dailyCount} / {DAILY_LIMIT}
-                </span>
-              </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-300 ${
-                    dailyCount >= DAILY_LIMIT ? 'bg-red-400' :
-                    dailyCount >= 80 ? 'bg-amber-400' : 'bg-cyan-400'
-                  }`}
-                  style={{ width: `${Math.min(100, (dailyCount / DAILY_LIMIT) * 100)}%` }}
-                />
-              </div>
-              {dailyWarning && (
-                <p className="text-[10px] text-red-400 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3 shrink-0" />
-                  {dailyWarning}
-                </p>
-              )}
-            </div>
-
-            {/* Queue All Button */}
-            <button
-              onClick={handleQueueAll}
-              disabled={parsedASINs.length === 0}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-400/10 px-4 py-3 text-sm font-semibold text-fuchsia-200 transition hover:bg-fuchsia-400/20 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Plus className="h-4 w-4" />
-              Queue All ({parsedASINs.length} ASINs)
-            </button>
-
-          </div>
-        </aside>
-
-        {/* ═══════════════════════════════════════════════════════
-            RIGHT COLUMN — Queue & Results
-        ═══════════════════════════════════════════════════════ */}
-        <main className="flex flex-col min-h-screen">
-
-          {/* Queue Header */}
-          <div className="border-b border-white/[0.07] px-6 py-4 flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <UploadCloud className="h-5 w-5 text-fuchsia-400" />
-              <h2 className="text-base font-semibold text-slate-100">Listing Queue</h2>
-              {queue.length > 0 && (
-                <span className="rounded-full border border-fuchsia-400/40 bg-fuchsia-400/10 px-2.5 py-0.5 text-xs font-semibold text-fuchsia-300">
-                  {queue.length}
+              {parseMsg && (
+                <span className={`text-xs ${parsedEntries.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {parseMsg}
                 </span>
               )}
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              {/* List All CLEAR button */}
-              {queue.some(i => i.status === 'CLEAR') && (
-                <button
-                  onClick={handleListAll}
-                  disabled={batchRunning || dailyCount >= DAILY_LIMIT}
-                  className="flex items-center gap-2 rounded-xl border border-fuchsia-400/40 bg-fuchsia-400/10 px-3 py-2 text-xs font-medium text-fuchsia-200 transition hover:bg-fuchsia-400/20 disabled:opacity-40"
-                >
-                  {batchRunning
-                    ? <Loader className="h-3.5 w-3.5 animate-spin" />
-                    : <Zap className="h-3.5 w-3.5" />
-                  }
-                  {batchRunning ? `Listing ${batchProgress.done}/${batchProgress.total}…` : 'List All Clear'}
-                </button>
-              )}
-
-              {queue.length > 0 && (
-                <button
-                  onClick={clearAll}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-slate-400 transition hover:text-red-300 hover:border-red-400/30"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Clear All
-                </button>
+              {parsedEntries.length > 0 && !isActive && (
+                <span className="ml-auto text-[10px] text-slate-500">
+                  {parsedEntries.length} ready to queue
+                </span>
               )}
             </div>
           </div>
 
-          {/* Progress Bar (batch running) */}
-          {batchRunning && (
-            <div className="px-6 py-2 border-b border-white/[0.07]">
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
-                <span>Listing batch…</span>
-                <span>{batchProgress.done} of {batchProgress.total}</span>
+          {/* Progress bar (visible when running) */}
+          {isActive && totalJobs > 0 && (
+            <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-white">
+                  Progress — {progress.position}/{totalJobs}
+                </span>
+                <span className="text-xs text-slate-400">{progressPct}%</span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-fuchsia-400 transition-all duration-300"
-                  style={{ width: `${batchProgress.total > 0 ? (batchProgress.done / batchProgress.total) * 100 : 0}%` }}
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
                 />
+              </div>
+              <div className="flex gap-4 mt-2 text-[10px]">
+                <span className="text-fuchsia-400">✓ {listedCount} listed</span>
+                <span className="text-red-400">✗ {blockedCount} blocked</span>
+                <span className="text-amber-400">⚠ {errorCount} errors</span>
+                <span className="text-slate-500">↷ {progress.skipped} skipped</span>
               </div>
             </div>
           )}
 
-          {/* Queue Items */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2 [scrollbar-width:thin] [scrollbar-color:rgba(217,70,239,0.3)_transparent]">
+          {/* Job queue table */}
+          {jobs.length > 0 && (
+            <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/60">
+                <div className="flex items-center gap-2">
+                  <List className="h-4 w-4 text-slate-400" />
+                  <span className="text-sm font-semibold text-white">Queue</span>
+                  <span className="text-[10px] text-slate-500 ml-1">{jobs.length} items</span>
+                </div>
+                {!isActive && (
+                  <button
+                    onClick={handleClear}
+                    className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="divide-y divide-slate-800/40 max-h-[480px] overflow-y-auto">
+                {jobs.map(job => (
+                  <div key={job.asin} className="px-4 py-2.5 hover:bg-slate-800/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <StatusIcon status={job.status} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-slate-400">{job.asin}</span>
+                          <StatusBadge status={job.status} />
+                          {job.retries > 0 && (
+                            <span className="text-[9px] text-amber-400">retry {job.retries}</span>
+                          )}
+                        </div>
+                        {job.title && (
+                          <p className="text-xs text-slate-300 truncate mt-0.5">{job.title}</p>
+                        )}
+                        {job.error && (
+                          <p className="text-[10px] text-amber-400 mt-0.5">
+                            [{job.error.code}] {job.error.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        {job.amazonPrice !== undefined && job.amazonPrice > 0 && (
+                          <div className="text-[10px] text-slate-500">${job.amazonPrice.toFixed(2)}</div>
+                        )}
+                        {job.ebayPrice !== undefined && job.ebayPrice > 0 && (
+                          <div className="text-xs font-semibold text-emerald-400">${job.ebayPrice.toFixed(2)}</div>
+                        )}
+                      </div>
+                      {!isActive && (
+                        <button
+                          onClick={() => handleRemoveJob(job.asin)}
+                          className="text-slate-600 hover:text-red-400 transition-colors ml-1"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-            {queue.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <div className="grid h-16 w-16 place-items-center rounded-2xl border border-fuchsia-400/20 bg-fuchsia-400/5">
-                  <UploadCloud className="h-8 w-8 text-fuchsia-400/40" />
+          {/* Error summary (shown after run) */}
+          {Object.keys(errorSummary).length > 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-amber-300">Failure Point Summary</h3>
+              </div>
+              <div className="space-y-1">
+                {Object.entries(errorSummary).map(([code, count]) => (
+                  <div key={code} className="flex items-center justify-between text-xs">
+                    <span className="font-mono text-amber-400">{code}</span>
+                    <span className="text-slate-400">{count}×</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT COLUMN ── */}
+        <div className="space-y-4">
+
+          {/* Control panel */}
+          <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-4 w-4 text-fuchsia-400" />
+              <h2 className="text-sm font-semibold text-white">Automation Controls</h2>
+            </div>
+
+            {/* Listing Mode Toggle */}
+            <div className="mb-4">
+              <label className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 block">Listing Mode</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setListingMode('bulk-upload')}
+                  disabled={isActive}
+                  className={`rounded-lg border px-2 py-2.5 text-left transition-colors disabled:opacity-40 ${
+                    listingMode === 'bulk-upload'
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                      : 'border-slate-700/50 bg-slate-800/40 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <Download className="h-3 w-3" />
+                    <span className="text-xs font-semibold">Bulk Upload</span>
+                  </div>
+                  <div className="text-[9px] text-slate-500">Excel → eBay (1,000/file)</div>
+                </button>
+                <button
+                  onClick={() => setListingMode('prelist')}
+                  disabled={isActive}
+                  className={`rounded-lg border px-2 py-2.5 text-left transition-colors disabled:opacity-40 ${
+                    listingMode === 'prelist'
+                      ? 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300'
+                      : 'border-slate-700/50 bg-slate-800/40 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <ExternalLink className="h-3 w-3" />
+                    <span className="text-xs font-semibold">Auto-Fill</span>
+                  </div>
+                  <div className="text-[9px] text-slate-500">Prelist form (1 at a time)</div>
+                </button>
+              </div>
+              {listingMode === 'bulk-upload' && (
+                <p className="text-[9px] text-emerald-500/70 mt-1.5">
+                  ✓ Recommended — uses eBay's official bulk upload
+                </p>
+              )}
+            </div>
+
+            {/* Listing type (prelist mode only) */}
+            {listingMode === 'prelist' && (
+            <div className="mb-4">
+              <label className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 block">Listing Type</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {LISTING_TYPES.map(lt => (
+                  <button
+                    key={lt.id}
+                    onClick={() => setListingType(lt.id)}
+                    disabled={isActive}
+                    className={`rounded-lg border px-2 py-2 text-left transition-colors disabled:opacity-40 ${
+                      listingType === lt.id
+                        ? 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300'
+                        : 'border-slate-700/50 bg-slate-800/40 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="text-xs font-semibold">{lt.label}</div>
+                    <div className="text-[9px] text-slate-500 mt-0.5">{lt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            )}
+
+            {/* Threads */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-slate-500 uppercase tracking-widest">Threads</label>
+                <span className="text-xs font-bold text-cyan-400">{threads}</span>
+              </div>
+              <input
+                type="range" min={1} max={30} step={1}
+                value={threads}
+                onChange={e => setThreads(Number(e.target.value))}
+                disabled={isActive}
+                className="w-full accent-cyan-500 disabled:opacity-40"
+              />
+              <div className="flex justify-between text-[9px] text-slate-600 mt-0.5">
+                <span>1 (safe)</span><span>15</span><span>30 (max)</span>
+              </div>
+            </div>
+
+            {/* Markup */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-slate-500 uppercase tracking-widest">Markup</label>
+                <span className="text-xs font-bold text-emerald-400">{effectiveMarkup}%</span>
+              </div>
+              <input
+                type="range" min={scheduleMin} max={300} step={5}
+                value={markup}
+                onChange={e => setMarkup(Number(e.target.value))}
+                disabled={isActive}
+                className="w-full accent-emerald-500 disabled:opacity-40"
+              />
+              <div className="text-[9px] text-slate-600 mt-0.5">
+                Schedule min: {scheduleMin}% (acct age {accountAgeWeeks}w)
+              </div>
+            </div>
+
+            {/* Account age */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-slate-500 uppercase tracking-widest">Account Age</label>
+                <span className="text-xs font-bold text-slate-300">{accountAgeWeeks}w</span>
+              </div>
+              <input
+                type="range" min={1} max={52} step={1}
+                value={accountAgeWeeks}
+                onChange={e => setAccountAgeWeeks(Number(e.target.value))}
+                disabled={isActive}
+                className="w-full accent-blue-500 disabled:opacity-40"
+              />
+            </div>
+
+            {/* Advanced settings toggle */}
+            <button
+              onClick={() => setShowSettings(s => !s)}
+              className="flex items-center gap-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors mb-3"
+            >
+              <Settings className="h-3 w-3" />
+              Advanced settings
+              <ChevronDown className={`h-3 w-3 transition-transform ${showSettings ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showSettings && (
+              <div className="space-y-3 mb-4 p-3 rounded-lg bg-slate-800/40 border border-slate-700/40">
+                {/* Price range */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] text-slate-500 block mb-1">Min Amazon Price ($)</label>
+                    <input
+                      type="number" min={0} step={1}
+                      value={minPrice}
+                      onChange={e => setMinPrice(Number(e.target.value))}
+                      disabled={isActive}
+                      className="w-full rounded bg-slate-700/50 border border-slate-600/40 px-2 py-1 text-xs text-slate-200 focus:outline-none disabled:opacity-40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-500 block mb-1">Max Amazon Price ($)</label>
+                    <input
+                      type="number" min={0} step={1}
+                      value={maxPrice}
+                      onChange={e => setMaxPrice(Number(e.target.value))}
+                      disabled={isActive}
+                      className="w-full rounded bg-slate-700/50 border border-slate-600/40 px-2 py-1 text-xs text-slate-200 focus:outline-none disabled:opacity-40"
+                    />
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-slate-400">Queue is empty</p>
-                  <p className="text-[11px] text-slate-600 mt-1">Paste ASINs on the left and click Queue All</p>
+                {/* Max retries */}
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">Max Retries per ASIN</label>
+                  <input
+                    type="number" min={0} max={5} step={1}
+                    value={maxRetries}
+                    onChange={e => setMaxRetries(Number(e.target.value))}
+                    disabled={isActive}
+                    className="w-full rounded bg-slate-700/50 border border-slate-600/40 px-2 py-1 text-xs text-slate-200 focus:outline-none disabled:opacity-40"
+                  />
                 </div>
+                {/* Toggles */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox" checked={fbaOnly}
+                    onChange={e => setFbaOnly(e.target.checked)}
+                    disabled={isActive}
+                    className="accent-cyan-500"
+                  />
+                  <span className="text-xs text-slate-400">FBA Only</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox" checked={closeErrors}
+                    onChange={e => setCloseErrors(e.target.checked)}
+                    disabled={isActive}
+                    className="accent-cyan-500"
+                  />
+                  <span className="text-xs text-slate-400">Auto-close error tabs</span>
+                </label>
               </div>
             )}
 
-            {queue.map(item => (
-              <div
-                key={item.asin}
-                className={`rounded-xl border bg-white/[0.025] p-4 transition-all ${
-                  item.status === 'BLOCKED' ? 'border-red-400/20' :
-                  item.status === 'LISTED'  ? 'border-fuchsia-400/20' :
-                  item.status === 'CLEAR'   ? 'border-emerald-400/20' :
-                  item.status === 'ERROR'   ? 'border-amber-400/20' :
-                  'border-white/[0.07]'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Status icon */}
-                  <div className="mt-0.5">
-                    <StatusIcon status={item.status} />
-                  </div>
+            {/* Action buttons */}
+            <div className="space-y-2">
+              {/* Bulk Upload mode: Download Excel button */}
+              {listingMode === 'bulk-upload' && !isActive && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (parsedEntries.length === 0) { setParseMsg('Parse ASINs first'); return; }
+                      const rows: BulkUploadRow[] = parsedEntries.map(e => ({ asin: e.asin }));
+                      downloadBulkUploadTemplate(rows);
+                    }}
+                    disabled={parsedEntries.length === 0}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Excel ({parsedEntries.length} ASINs)
+                  </button>
+                  <a
+                    href="https://www.ebay.com/sh/reports/uploads"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800/60 border border-slate-700/50 px-4 py-2 text-xs font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300 transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open eBay Bulk Upload Page
+                  </a>
+                </>
+              )}
 
-                  {/* Main content */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    {/* ASIN + status badge */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-semibold text-slate-200">{item.asin}</span>
-                      <StatusBadge status={item.status} />
-                      {item.brand && (
-                        <span className="text-[10px] text-slate-500 border border-white/10 rounded px-1.5 py-0.5">
-                          {item.brand}
-                        </span>
-                      )}
-                    </div>
+              {/* Prelist mode: Start button */}
+              {listingMode === 'prelist' && !isActive && engineStatus !== 'RUNNING' && (
+                <button
+                  onClick={handleStart}
+                  disabled={parsedEntries.length === 0 || dailyCount >= DAILY_LIMIT}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-fuchsia-500 px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Bulk Run ({parsedEntries.length} ASINs)
+                </button>
+              )}
 
-                    {/* Title */}
-                    {item.title && (
-                      <p className="text-[11px] text-slate-300 leading-5 line-clamp-2">{item.title}</p>
-                    )}
+              {/* Pause / Resume */}
+              {isRunning && (
+                <button
+                  onClick={handlePause}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 text-sm font-semibold text-amber-300 hover:bg-amber-500/20 transition-colors"
+                >
+                  <Pause className="h-4 w-4" />
+                  Pause
+                </button>
+              )}
+              {isPaused && (
+                <button
+                  onClick={handleResume}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-2.5 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Play className="h-4 w-4" />
+                  Resume
+                </button>
+              )}
 
-                    {/* Price row */}
-                    {item.price !== undefined && item.price > 0 && (
-                      <div className="flex items-center gap-3 text-[11px]">
-                        <span className="text-slate-500">Amazon: <span className="text-slate-300">${item.price.toFixed(2)}</span></span>
-                        {item.ebayPrice !== undefined && (
-                          <>
-                            <ChevronRight className="h-3 w-3 text-slate-600" />
-                            <span className="text-slate-500">eBay: <span className="text-fuchsia-300 font-semibold">${item.ebayPrice.toFixed(2)}</span></span>
-                            <span className="text-emerald-400 text-[10px]">
-                              +${(item.ebayPrice - item.price).toFixed(2)}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    )}
+              {/* Stop */}
+              {isActive && (
+                <button
+                  onClick={handleStop}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-sm font-semibold text-red-300 hover:bg-red-500/20 transition-colors"
+                >
+                  <Square className="h-4 w-4" />
+                  Stop
+                </button>
+              )}
 
-                    {/* VERO result */}
-                    {item.veroResult && (
-                      <div className={`flex items-center gap-1.5 text-[10px] ${item.veroResult.blocked ? 'text-red-400' : 'text-emerald-400'}`}>
-                        {item.veroResult.blocked
-                          ? <><XCircle className="h-3 w-3 shrink-0" /> VERO BLOCKED — {item.veroResult.reason}</>
-                          : <><CheckCircle className="h-3 w-3 shrink-0" /> Compliance clear</>
-                        }
-                      </div>
-                    )}
+              {/* Resume from storage */}
+              {(engineStatus === 'STOPPED' || engineStatus === 'PAUSED') && !isActive && (
+                <button
+                  onClick={handleResumeFromStorage}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-500/10 border border-blue-500/30 px-4 py-2.5 text-sm font-semibold text-blue-300 hover:bg-blue-500/20 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Resume Saved Run
+                </button>
+              )}
 
-                    {/* Error */}
-                    {item.error && (
-                      <p className="text-[10px] text-amber-400 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3 shrink-0" />
-                        {item.error}
-                      </p>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 pt-1 flex-wrap">
-                      {item.status === 'CLEAR' && item.ebayPrice && item.title && (
-                        <button
-                          onClick={() => listItem(item.asin, item.ebayPrice!, item.title!)}
-                          disabled={dailyCount >= DAILY_LIMIT}
-                          className="flex items-center gap-1.5 rounded-lg border border-fuchsia-400/40 bg-fuchsia-400/10 px-2.5 py-1.5 text-[11px] font-medium text-fuchsia-200 transition hover:bg-fuchsia-400/20 disabled:opacity-40"
-                        >
-                          <UploadCloud className="h-3 w-3" />
-                          List on eBay
-                        </button>
-                      )}
-                      {(item.status === 'CLEAR' || item.status === 'LISTED') && (
-                        <button
-                          onClick={() => setExpandedDesc(expandedDesc === item.asin ? null : item.asin)}
-                          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition ${
-                            item.description
-                              ? 'border-violet-400/40 bg-violet-400/10 text-violet-200'
-                              : 'border-white/10 bg-white/[0.03] text-slate-400 hover:text-violet-300 hover:border-violet-400/30'
-                          }`}
-                        >
-                          <PenTool className="h-3 w-3" />
-                          {item.description ? 'Description ✓' : 'Build Description'}
-                          <ChevronDown className={`h-3 w-3 transition-transform ${expandedDesc === item.asin ? 'rotate-180' : ''}`} />
-                        </button>
-                      )}
-                      {(item.status === 'ERROR' || item.status === 'BLOCKED') && (
-                        <button
-                          onClick={() => recheckItem(item.asin)}
-                          className="flex items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/5 px-2.5 py-1.5 text-[11px] font-medium text-cyan-300 transition hover:bg-cyan-400/10"
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          Recheck
-                        </button>
-                      )}
-                      <button
-                        onClick={() => removeItem(item.asin)}
-                        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-slate-500 transition hover:text-red-300 hover:border-red-400/20 ml-auto"
-                      >
-                        <X className="h-3 w-3" />
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Product image */}
-                  {item.image && (
-                    <div className="shrink-0 h-14 w-14 rounded-lg overflow-hidden border border-white/10 bg-white/5">
-                      <img src={item.image} alt={item.title} className="h-full w-full object-contain" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Description Builder accordion */}
-                {expandedDesc === item.asin && (
-                  <div className="mt-3 border-t border-violet-400/20 pt-3">
-                    <DescriptionBuilder
-                      mode="panel"
-                      productData={item.title ? {
-                        title: item.title,
-                        brand: item.brand ?? '',
-                        bullets: [],
-                        price: item.price ?? 0,
-                        asin: item.asin,
-                      } as DescProductData : undefined}
-                      onInsert={(html) => {
-                        setQueue(prev => prev.map(q =>
-                          q.asin === item.asin ? { ...q, description: html } : q
-                        ));
-                        setExpandedDesc(null);
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Summary Row */}
-          {queue.length > 0 && (
-            <div className="border-t border-white/[0.07] px-6 py-3 flex items-center gap-6 text-[11px]">
-              <div className="flex items-center gap-1.5">
-                <BarChart3 className="h-3.5 w-3.5 text-slate-500" />
-                <span className="text-slate-500">Summary:</span>
-              </div>
-              <span className="text-fuchsia-300 font-medium">{listed} listed</span>
-              <span className="text-red-400">{blocked} blocked</span>
-              <span className="text-amber-400">{errors} errors</span>
-              <span className="text-slate-500">{queue.filter(i => i.status === 'PENDING').length} pending</span>
-              {estProfit > 0 && (
-                <span className="ml-auto text-emerald-400 font-semibold">
-                  Est. profit: ${estProfit.toFixed(2)}
-                </span>
+              {/* Clear */}
+              {!isActive && jobs.length > 0 && (
+                <button
+                  onClick={handleClear}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-slate-700/50 px-4 py-2 text-xs font-semibold text-slate-400 hover:text-red-400 hover:border-red-500/30 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Clear Queue
+                </button>
               )}
             </div>
+          </div>
+
+          {/* Stats card */}
+          {(isActive || engineStatus === 'COMPLETE' || jobs.length > 0) && (
+            <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="h-4 w-4 text-slate-400" />
+                <h3 className="text-sm font-semibold text-white">Run Stats</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'Listed',   value: listedCount,   cls: 'text-fuchsia-400' },
+                  { label: 'Pending',  value: pendingCount,  cls: 'text-slate-400' },
+                  { label: 'Blocked',  value: blockedCount,  cls: 'text-red-400' },
+                  { label: 'Errors',   value: errorCount,    cls: 'text-amber-400' },
+                  { label: 'Skipped',  value: progress.skipped, cls: 'text-slate-500' },
+                  { label: 'Total',    value: totalJobs,     cls: 'text-white' },
+                ].map(s => (
+                  <div key={s.label} className="rounded-lg bg-slate-800/40 px-3 py-2">
+                    <div className={`text-lg font-bold ${s.cls}`}>{s.value}</div>
+                    <div className="text-[9px] text-slate-500 uppercase tracking-widest">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </main>
+
+          {/* Position tracker */}
+          {isActive && (
+            <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-cyan-400" />
+                <h3 className="text-sm font-semibold text-white">Position</h3>
+              </div>
+              <div className="text-2xl font-bold text-cyan-400">
+                {progress.position}
+                <span className="text-sm text-slate-500 font-normal"> / {totalJobs}</span>
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">
+                {threads} thread{threads !== 1 ? 's' : ''} · {listingType} mode
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
