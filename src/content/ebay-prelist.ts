@@ -144,16 +144,26 @@ async function init(): Promise<void> {
   }
 
   const title: string = pendingListing.title;
-  console.log(`[Syndrax Prelist] Starting flow for: "${title}"`);
+  const url = window.location.href;
+  console.log(`[Syndrax Prelist] Starting flow for: "${title}" — URL: ${url}`);
 
   await sleep(2000);
 
   const statusEl = showStatus('Starting…');
 
-  const searched = await phaseSearch(title, statusEl);
-  if (!searched) {
-    updateStatus(statusEl, `⚠ Search failed — enter title manually:<br><b>${title.slice(0, 50)}</b>`, '#f59e0b');
-    return;
+  // eBay auto-redirects /sl/prelist/home?title=... → /sl/prelist/identify?title=...
+  // On the identify page the keyword search is already done — skip Phase 1.
+  const alreadyOnIdentify = url.includes('/sl/prelist/identify') || url.includes('/sl/prelist/category');
+
+  if (!alreadyOnIdentify) {
+    const searched = await phaseSearch(title, statusEl);
+    if (!searched) {
+      updateStatus(statusEl, `⚠ Search failed — enter title manually:<br><b>${title.slice(0, 50)}</b>`, '#f59e0b');
+      return;
+    }
+  } else {
+    console.log('[Syndrax Prelist] Already on identify page — skipping search phase');
+    updateStatus(statusEl, 'Skipping search (eBay auto-redirected)…');
   }
 
   await phaseMatch(statusEl);
