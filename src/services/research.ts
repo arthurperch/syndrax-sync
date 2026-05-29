@@ -16,7 +16,7 @@ export interface AmazonProduct {
 
 /**
  * Search Amazon for products matching a query
- * Uses Chrome DevTools Protocol to open amazon.com/s?k=query and scrape top 10 results
+ * Uses Chrome scripting API to open amazon.com/s?k=query and scrape top 10 results
  * @param query - Search query (e.g., "phone case")
  * @returns Array of top 10 AmazonProduct results
  */
@@ -64,7 +64,7 @@ function waitForTabLoad(tabId: number, timeout: number): Promise<void> {
       if (id === tabId && info.status === 'complete') {
         clearTimeout(timer);
         chrome.tabs.onUpdated.removeListener(listener);
-        setTimeout(resolve, 1500); // Extra delay for content to render
+        setTimeout(resolve, 2000); // Extra delay for dynamic content to render
       }
     };
     
@@ -74,80 +74,133 @@ function waitForTabLoad(tabId: number, timeout: number): Promise<void> {
 
 /**
  * Scrape Amazon search results page
+ * Uses executeScript return value (MV3-safe) instead of sendMessage
  */
 async function scrapeSearchResults(tabId: number): Promise<AmazonProduct[]> {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      console.error('[Research] Scrape timeout');
-      resolve([]);
-    }, 10000);
-
-    chrome.scripting.executeScript({
+  try {
+    const results = await chrome.scripting.executeScript({
       target: { tabId },
       func: () => {
         try {
           const products: any[] = [];
-          
-          // Find all product containers on the search results page
-          const productElements = document.querySelectorAll('[data-component-type="s-search-result"]');
-          
-          console.log(`[Amazon Scraper] Found ${productElements.length} product elements`);
-          
+
+          // Try multiple selectors for Amazon search result containers
+          // Amazon frequently changes their DOM structure
+          const SELECTORS = [
+            '[data-component-type="s-search-result"]',
+            '[data-asin]:not([data-asin=""])',
+            '.s-result-item[data-asin]',
+            '.sg-col-inner .s-widget-container',
+          ];
+
+          let productElements: NodeListOf<Element> | Element[] | null = null;
+
+          for (const sel of SELECTORS) {
+            const found = document.querySelectorAll(sel);
+            // Filter to only elements that have a non-empty data-asin
+            const withAsin = Array.from(found).filter(el => {
+              const asin = el.getAttribute('data-asin');
+              return asin && asin.trim().length > 0;
+            });
+            if (withAsin.length > 0) {
+              console.log(`[Amazon Scraper] Selector "${sel}" matched ${withAsin.length} elements with ASINs`);
+              productElements = withAsin;
+              break;
+            } else {
+              console.log(`[Amazon Scraper] Selector "${sel}" matched ${found.length} elements (0 with ASIN)`);
+            }
+          }
+
+          if (!productElements || productElements.length === 0) {
+            // Debug: log body snippet to help diagnose
+            console.warn('[Amazon Scraper] No product elements found. Body snippet:', document.body.innerHTML.slice(0, 500));
+            return [];
+          }
+
           // Scrape top 10 results
-          productElements.forEach((element, index) => {
-            if (index >= 10) return; // Limit to top 10
-            
+          const elements = Array.from(productElements).slice(0, 10);
+
+          for (let index = 0; index < elements.length; index++) {
+            const element = elements[index];
             try {
               // Extract ASIN from data attribute
               const asin = element.getAttribute('data-asin');
-              if (!asin) return;
-              
-              // Extract title
-              const titleEl = element.querySelector('h2 a span');
-              const title = titleEl?.textContent?.trim() || '';
-              if (!title) return;
-              
-              // Extract price
-              let price = 0;
-              const priceEl = element.querySelector('.a-price-whole');
-              if (priceEl) {
-                const priceText = priceEl.textContent?.replace(/[^0-9.]/g, '') || '0';
-                price = parseFloat(priceText);
-              }
-              
-              // Extract rating
-              let rating = 0;
-              const ratingEl = element.querySelector('.a-icon-star-small span');
-              if (ratingEl) {
-                const ratingText = ratingEl.textContent?.split(' ')[0] || '0';
-                rating = parseFloat(ratingText);
-              }
-              
-              // Extract review count
-              let reviewCount = 0;
-              const reviewEl = element.querySelector('[aria-label*="rating"]');
-              if (reviewEl) {
-                const reviewText = reviewEl.getAttribute('aria-label') || '';
-                const match = reviewText.match(/(\d+)\s*rating/i);
-                if (match) {
-                  reviewCount = parseInt(match[1]);
+              if (!asin || !asin.trim()) continue;
+
+              // Extract title — try multiple selectors
+              let title = '';
+              const titleSelectors = [
+                'h2 a span',
+                'h2 span',
+                '[data-cy="title-recipe"] span',
+                '.a-size-medium.a-color-base.a-text-normal',
+                '.a-size-base-plus.a-color-base.a-text-normal',
+                '.a-size-mini span',
+              ];
+              for (const ts of titleSelectors) {
+                const el = element.querySelector(ts);
+                if (el?.textContent?.trim()) {
+                  title = el.textContent.trim();
+                  break;
                 }
               }
-              
+              if (!title) continue;
+
+              // Extract price
+              let price = 0;
+              const priceWhole = element.querySelector('.a-price-whole');
+              const priceFraction = element.querySelector('.a-price-fraction');
+              if (priceWhole) {
+                const whole = priceWhole.textContent?.replace(/[^0-9]/g, '') || '0';
+                const fraction = priceFraction?.textContent?.replace(/[^0-9]/g, '') || '00';
+                price = parseFloat(`${whole}.${fraction}`);
+              }
+
+              // Extract rating
+              let rating = 0;
+              const ratingSelectors = [
+                '.a-icon-star-small span',
+                '.a-icon-star span',
+                'i[class*="a-star"] span',
+              ];
+              for (const rs of ratingSelectors) {
+                const el = element.querySelector(rs);
+                if (el?.textContent) {
+                  const val = parseFloat(el.textContent.split(' ')[0]);
+                  if (!isNaN(val)) { rating = val; break; }
+                }
+              }
+
+              // Extract review count
+              let reviewCount = 0;
+              const reviewEl = element.querySelector('[aria-label*="rating"]') ||
+                               element.querySelector('[aria-label*="stars"]');
+              if (reviewEl) {
+                const reviewText = reviewEl.getAttribute('aria-label') || '';
+                const match = reviewText.match(/([\d,]+)\s*(rating|star)/i);
+                if (match) {
+                  reviewCount = parseInt(match[1].replace(/,/g, ''));
+                }
+              }
+
               // Extract image URL
               let imageUrl = '';
-              const imgEl = element.querySelector('img');
+              const imgEl = element.querySelector('img.s-image') ||
+                            element.querySelector('img[data-image-latency]') ||
+                            element.querySelector('img');
               if (imgEl) {
-                imageUrl = imgEl.src || imgEl.getAttribute('data-src') || '';
+                imageUrl = (imgEl as HTMLImageElement).src ||
+                           imgEl.getAttribute('data-src') || '';
               }
-              
+
               // Extract product URL
-              const linkEl = element.querySelector('h2 a');
-              const productUrl = linkEl?.getAttribute('href') || '';
-              const fullUrl = productUrl.startsWith('http') 
-                ? productUrl 
+              const linkEl = element.querySelector('h2 a') ||
+                             element.querySelector('a.a-link-normal[href*="/dp/"]');
+              const productUrl = linkEl?.getAttribute('href') || `/dp/${asin}`;
+              const fullUrl = productUrl.startsWith('http')
+                ? productUrl
                 : `https://www.amazon.com${productUrl}`;
-              
+
               products.push({
                 asin,
                 title,
@@ -157,42 +210,30 @@ async function scrapeSearchResults(tabId: number): Promise<AmazonProduct[]> {
                 imageUrl,
                 productUrl: fullUrl
               });
-              
+
               console.log(`[Amazon Scraper] Product ${index + 1}: ${title} - $${price}`);
             } catch (err) {
               console.error(`[Amazon Scraper] Error scraping product ${index}:`, err);
             }
-          });
-          
-          // Send results back to background script
-          chrome.runtime.sendMessage({
-            type: 'RESEARCH_RESULTS',
-            payload: { products }
-          });
+          }
+
+          return products;
         } catch (err) {
           console.error('[Amazon Scraper] Fatal error:', err);
-          chrome.runtime.sendMessage({
-            type: 'RESEARCH_RESULTS',
-            payload: { products: [] }
-          });
+          return [];
         }
       }
-    }).catch(err => {
-      console.error('[Research] Script injection error:', err);
-      resolve([]);
     });
 
-    // Listen for results from content script
-    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-      if (message.type === 'RESEARCH_RESULTS') {
-        clearTimeout(timeout);
-        chrome.runtime.onMessage.removeListener(messageListener);
-        resolve(message.payload.products || []);
-      }
-    };
-    
-    chrome.runtime.onMessage.addListener(messageListener);
-  });
+    if (results && results[0] && results[0].result) {
+      return results[0].result as AmazonProduct[];
+    }
+    console.warn('[Research] executeScript returned no result');
+    return [];
+  } catch (err) {
+    console.error('[Research] Script injection error:', err);
+    return [];
+  }
 }
 
 /**
@@ -225,24 +266,28 @@ export async function getProductDetails(asin: string): Promise<Partial<AmazonPro
 
 /**
  * Scrape detailed product information
+ * Uses executeScript return value (MV3-safe)
  */
 async function scrapeProductDetails(tabId: number, asin: string): Promise<Partial<AmazonProduct> | null> {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => {
-      console.error('[Research] Product details scrape timeout');
-      resolve(null);
-    }, 10000);
-
-    chrome.scripting.executeScript({
+  try {
+    const results = await chrome.scripting.executeScript({
       target: { tabId },
       func: (asn: string) => {
         try {
           const details: any = { asin: asn };
           
           // Brand
-          const brandEl = document.querySelector('[data-feature-name="by_line_text"]');
-          if (brandEl) {
-            details.brand = brandEl.textContent?.trim() || '';
+          const brandSelectors = [
+            '[data-feature-name="by_line_text"]',
+            '#bylineInfo',
+            '.po-brand .po-break-word',
+          ];
+          for (const bs of brandSelectors) {
+            const el = document.querySelector(bs);
+            if (el?.textContent?.trim()) {
+              details.brand = el.textContent.trim();
+              break;
+            }
           }
           
           // Category
@@ -255,37 +300,34 @@ async function scrapeProductDetails(tabId: number, asin: string): Promise<Partia
           }
           
           // Description
-          const descEl = document.querySelector('[data-feature-name="featurebullets"]');
-          if (descEl) {
-            details.description = descEl.textContent?.trim() || '';
+          const descSelectors = [
+            '[data-feature-name="featurebullets"]',
+            '#feature-bullets',
+            '#productDescription',
+          ];
+          for (const ds of descSelectors) {
+            const el = document.querySelector(ds);
+            if (el?.textContent?.trim()) {
+              details.description = el.textContent.trim().slice(0, 500);
+              break;
+            }
           }
           
-          chrome.runtime.sendMessage({
-            type: 'PRODUCT_DETAILS',
-            payload: { details }
-          });
+          return details;
         } catch (err) {
           console.error('[Amazon Scraper] Error scraping product details:', err);
-          chrome.runtime.sendMessage({
-            type: 'PRODUCT_DETAILS',
-            payload: { details: null }
-          });
+          return null;
         }
       },
       args: [asin]
-    }).catch(err => {
-      console.error('[Research] Script injection error:', err);
-      resolve(null);
     });
 
-    const messageListener = (message: any, sender: chrome.runtime.MessageSender, sendResponse: (response?: any) => void) => {
-      if (message.type === 'PRODUCT_DETAILS') {
-        clearTimeout(timeout);
-        chrome.runtime.onMessage.removeListener(messageListener);
-        resolve(message.payload.details);
-      }
-    };
-    
-    chrome.runtime.onMessage.addListener(messageListener);
-  });
+    if (results && results[0] && results[0].result) {
+      return results[0].result as Partial<AmazonProduct>;
+    }
+    return null;
+  } catch (err) {
+    console.error('[Research] Script injection error:', err);
+    return null;
+  }
 }

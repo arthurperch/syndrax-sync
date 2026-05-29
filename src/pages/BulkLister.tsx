@@ -1,9 +1,5 @@
 /**
  * BulkLister.tsx — Syndrax Sync Bulk Lister
- *
- * Powered by BulkListingEngine — clean, modular, traceable.
- * Features: thread pool (1-30), listing types, pause/resume/stop,
- * position tracking, price filters, FBA filter, VERO check, daily limit.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,7 +7,7 @@ import {
   UploadCloud, Trash2, CheckCircle, XCircle, AlertTriangle,
   Loader, RefreshCw, X,
   ChevronRight, Zap, BarChart3, Play, Pause, Square,
-  Settings, TrendingUp, List, ChevronDown,
+  Settings, TrendingUp, List, ChevronDown, Download, ExternalLink,
 } from 'lucide-react';
 import {
   bulkEngine,
@@ -23,6 +19,7 @@ import {
   type EngineEvent,
 } from '../services/bulk-listing-engine';
 import { getErrorSummary } from '../services/error-tracker';
+import { downloadBulkUploadTemplate, type BulkUploadRow } from '../services/excel-generator';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,12 +141,16 @@ function SyndraxLogoMark() {
 
 // ─── Listing type button ──────────────────────────────────────────────────────
 
-const LISTING_TYPES: { id: ListingType; label: string; credits: string; desc: string }[] = [
-  { id: 'standard', label: 'Standard',  credits: '0.2',  desc: 'Fast, basic listing' },
-  { id: 'opti',     label: 'Opti-List', credits: '1',    desc: 'Optimized title + bullets' },
-  { id: 'chat',     label: 'Chat-List', credits: '1',    desc: 'AI-written description' },
-  { id: 'seo',      label: 'SEO-List',  credits: '1',    desc: 'SEO-optimized full listing' },
+const LISTING_TYPES: { id: ListingType; label: string; desc: string }[] = [
+  { id: 'standard', label: 'Standard',  desc: 'Fast, basic listing' },
+  { id: 'opti',     label: 'Opti-List', desc: 'Optimized title + bullets' },
+  { id: 'chat',     label: 'Chat-List', desc: 'AI-written description' },
+  { id: 'seo',      label: 'SEO-List',  desc: 'SEO-optimized full listing' },
 ];
+
+// ─── Listing mode ─────────────────────────────────────────────────────────────
+
+type ListingMode = 'prelist' | 'bulk-upload';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -183,6 +184,9 @@ export default function BulkLister() {
   // ── Error summary ──────────────────────────────────────────────────────────
   const [errorSummary, setErrorSummary] = useState<Record<string, number>>({});
   const [expandedAsin, setExpandedAsin] = useState<string | null>(null);
+
+  // ── Listing mode ───────────────────────────────────────────────────────────
+  const [listingMode, setListingMode] = useState<ListingMode>('bulk-upload');
 
   // ── Description builder ────────────────────────────────────────────────────
   const [descBuilderAsin, setDescBuilderAsin] = useState<string | null>(null);
@@ -545,7 +549,50 @@ export default function BulkLister() {
               <h2 className="text-sm font-semibold text-white">Automation Controls</h2>
             </div>
 
-            {/* Listing type */}
+            {/* Listing Mode Toggle */}
+            <div className="mb-4">
+              <label className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 block">Listing Mode</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setListingMode('bulk-upload')}
+                  disabled={isActive}
+                  className={`rounded-lg border px-2 py-2.5 text-left transition-colors disabled:opacity-40 ${
+                    listingMode === 'bulk-upload'
+                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                      : 'border-slate-700/50 bg-slate-800/40 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <Download className="h-3 w-3" />
+                    <span className="text-xs font-semibold">Bulk Upload</span>
+                  </div>
+                  <div className="text-[9px] text-slate-500">Excel → eBay (1,000/file)</div>
+                </button>
+                <button
+                  onClick={() => setListingMode('prelist')}
+                  disabled={isActive}
+                  className={`rounded-lg border px-2 py-2.5 text-left transition-colors disabled:opacity-40 ${
+                    listingMode === 'prelist'
+                      ? 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300'
+                      : 'border-slate-700/50 bg-slate-800/40 text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <ExternalLink className="h-3 w-3" />
+                    <span className="text-xs font-semibold">Auto-Fill</span>
+                  </div>
+                  <div className="text-[9px] text-slate-500">Prelist form (1 at a time)</div>
+                </button>
+              </div>
+              {listingMode === 'bulk-upload' && (
+                <p className="text-[9px] text-emerald-500/70 mt-1.5">
+                  ✓ Recommended — uses eBay's official bulk upload
+                </p>
+              )}
+            </div>
+
+            {/* Listing type (prelist mode only) */}
+            {listingMode === 'prelist' && (
             <div className="mb-4">
               <label className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 block">Listing Type</label>
               <div className="grid grid-cols-2 gap-1.5">
@@ -561,11 +608,12 @@ export default function BulkLister() {
                     }`}
                   >
                     <div className="text-xs font-semibold">{lt.label}</div>
-                    <div className="text-[9px] text-slate-500 mt-0.5">{lt.credits} credit{lt.credits !== '1' ? 's' : ''} · {lt.desc}</div>
+                    <div className="text-[9px] text-slate-500 mt-0.5">{lt.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
+            )}
 
             {/* Threads */}
             <div className="mb-4">
@@ -688,8 +736,35 @@ export default function BulkLister() {
 
             {/* Action buttons */}
             <div className="space-y-2">
-              {/* Start */}
-              {!isActive && engineStatus !== 'RUNNING' && (
+              {/* Bulk Upload mode: Download Excel button */}
+              {listingMode === 'bulk-upload' && !isActive && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (parsedEntries.length === 0) { setParseMsg('Parse ASINs first'); return; }
+                      const rows: BulkUploadRow[] = parsedEntries.map(e => ({ asin: e.asin }));
+                      downloadBulkUploadTemplate(rows);
+                    }}
+                    disabled={parsedEntries.length === 0}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-40 transition-opacity"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Excel ({parsedEntries.length} ASINs)
+                  </button>
+                  <a
+                    href="https://www.ebay.com/sh/reports/uploads"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800/60 border border-slate-700/50 px-4 py-2 text-xs font-semibold text-slate-300 hover:border-emerald-500/40 hover:text-emerald-300 transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open eBay Bulk Upload Page
+                  </a>
+                </>
+              )}
+
+              {/* Prelist mode: Start button */}
+              {listingMode === 'prelist' && !isActive && engineStatus !== 'RUNNING' && (
                 <button
                   onClick={handleStart}
                   disabled={parsedEntries.length === 0 || dailyCount >= DAILY_LIMIT}
