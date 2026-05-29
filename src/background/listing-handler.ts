@@ -16,6 +16,23 @@ export function handleCheckVero(title: string, brand: string): { blocked: boolea
   return { blocked: false, reason: '' };
 }
 
+// ─── Completion tracking ──────────────────────────────────────────────────────
+// Maps tabId → resolver function. When the content script sends LISTING_COMPLETE
+// for that tab, we resolve the promise and the caller unblocks.
+export const pendingListingResolvers: Map<number, (result: { success: boolean; error?: string }) => void> = new Map();
+
+/**
+ * Called by the background message handler when a LISTING_COMPLETE message
+ * arrives from the ebay-prelist content script.
+ */
+export function resolveListingCompletion(tabId: number, result: { success: boolean; error?: string }): void {
+  const resolver = pendingListingResolvers.get(tabId);
+  if (resolver) {
+    pendingListingResolvers.delete(tabId);
+    resolver(result);
+  }
+}
+
 export async function handleCreateEbayListing(payload: {
   asin: string;
   ebayPrice: number;
@@ -25,18 +42,33 @@ export async function handleCreateEbayListing(payload: {
   quantity?: number;
 }): Promise<{ success: boolean; error?: string }> {
   const { asin, ebayPrice, title, description, condition, quantity } = payload;
+
+  // Store listing data for the content script to pick up
   await chrome.storage.local.set({
     pendingListing: { title, description, price: ebayPrice, condition, quantity, images: [], asin }
   });
+
   // Open eBay's prelist page — content script auto-submits ASIN via Product ID tab.
   const tab = await chrome.tabs.create({ url: 'https://www.ebay.com/sl/prelist/home', active: true });
-  chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-    if (tabId === tab.id && info.status === 'complete') {
-      chrome.tabs.onUpdated.removeListener(listener);
-      setTimeout(() => {
-        chrome.tabs.sendMessage(tabId, { type: 'FILL_LISTING' });
-      }, 2500);
-    }
+  const tabId = tab.id!;
+
+  // Return a promise that resolves when the content script sends LISTING_COMPLETE
+  // or rejects after a 90-second timeout (eBay can be slow).
+  return new Promise<{ success: boolean; error?: string }>((resolve) => {
+    const TIMEOUT_MS = 90_000;
+
+    const timer = setTimeout(() => {
+      pendingListingResolvers.delete(tabId);
+      // Close the tab on timeout to avoid orphaned tabs
+      chrome.tabs.remove(tabId).catch(() => {});
+      resolve({ success: false, error: 'Listing timed out after 90 seconds' });
+    }, TIMEOUT_MS);
+
+    pendingListingResolvers.set(tabId, (result) => {
+      clearTimeout(timer);
+      // Close the tab once listing is done
+      chrome.tabs.remove(tabId).catch(() => {});
+      resolve(result);
+    });
   });
-  return { success: true };
 }

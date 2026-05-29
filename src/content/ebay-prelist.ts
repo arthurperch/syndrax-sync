@@ -87,6 +87,22 @@ async function tryWebUrlTab(asin: string): Promise<boolean> {
   return clickSubmit();
 }
 
+/**
+ * Wait for eBay to navigate away from the prelist page, which signals the
+ * draft was created and eBay is loading the listing form.
+ * We watch for the URL to change away from /sl/prelist/home.
+ */
+async function waitForPrelistNavigation(timeout = 60_000): Promise<boolean> {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (!window.location.href.includes('/sl/prelist/home')) {
+      return true;
+    }
+    await sleep(500);
+  }
+  return false;
+}
+
 async function init(): Promise<void> {
   const { pendingListing } = await chrome.storage.local.get('pendingListing');
   if (!pendingListing?.asin) { console.log('[Syndrax Prelist] No pending ASIN — skipping'); return; }
@@ -94,15 +110,44 @@ async function init(): Promise<void> {
   console.log(`[Syndrax Prelist] Starting auto-fill for ASIN: ${asin}`);
   await sleep(2500);
   const statusEl = showStatus(`Importing ASIN: ${asin}…`);
+
   let ok = await tryProductIdTab(asin);
-  if (!ok) { statusEl.innerHTML = `<span style="opacity:.7">⚡ Syndrax Sync</span><br>Trying Web URL…`; ok = await tryWebUrlTab(asin); }
+  if (!ok) {
+    statusEl.innerHTML = `<span style="opacity:.7">⚡ Syndrax Sync</span><br>Trying Web URL…`;
+    ok = await tryWebUrlTab(asin);
+  }
+
   if (ok) {
-    statusEl.innerHTML = `<span style="opacity:.7">⚡ Syndrax Sync</span><br>✓ Submitted — eBay is creating draft…`;
-    statusEl.style.borderColor = '#4ade80'; statusEl.style.color = '#4ade80';
-    setTimeout(() => statusEl.remove(), 6000);
+    statusEl.innerHTML = `<span style="opacity:.7">⚡ Syndrax Sync</span><br>✓ Submitted — waiting for eBay draft…`;
+    statusEl.style.borderColor = '#4ade80';
+    statusEl.style.color = '#4ade80';
+
+    // Wait for eBay to navigate away from prelist (draft created)
+    const navigated = await waitForPrelistNavigation(60_000);
+
+    // Clear pendingListing so other content scripts don't interfere
+    await chrome.storage.local.remove('pendingListing');
+
+    // Signal completion back to the background service worker
+    chrome.runtime.sendMessage({
+      type: 'LISTING_COMPLETE',
+      payload: { success: navigated, error: navigated ? undefined : 'eBay did not navigate away from prelist page' }
+    }).catch(() => {});
+
+    setTimeout(() => statusEl.remove(), 3000);
   } else {
     statusEl.innerHTML = `<span style="opacity:.7">⚡ Syndrax Sync</span><br>⚠ Auto-fill failed — enter ASIN manually: <b>${asin}</b>`;
-    statusEl.style.borderColor = '#f59e0b'; statusEl.style.color = '#f59e0b';
+    statusEl.style.borderColor = '#f59e0b';
+    statusEl.style.color = '#f59e0b';
+
+    // Clear pendingListing so the queue doesn't get stuck
+    await chrome.storage.local.remove('pendingListing');
+
+    // Signal failure back to background
+    chrome.runtime.sendMessage({
+      type: 'LISTING_COMPLETE',
+      payload: { success: false, error: 'Auto-fill failed on eBay prelist page' }
+    }).catch(() => {});
   }
 }
 

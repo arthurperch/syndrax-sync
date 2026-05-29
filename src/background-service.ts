@@ -2,7 +2,7 @@ import { storage, type InventoryItem } from './services/storage';
 import type { Message } from './services/messaging';
 import { discord, sendDailySummaryWebhook } from './services/discord-logger';
 import { claimTrackingNumber, type ClaimParams } from './services/trackcaptain';
-import { handleCheckVero, handleCreateEbayListing } from './background/listing-handler';
+import { handleCheckVero, handleCreateEbayListing, resolveListingCompletion } from './background/listing-handler';
 
 // Helper to get next midnight timestamp
 function getNextMidnight(): number {
@@ -561,6 +561,18 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           condition?: string;
           quantity?: number;
         });
+      }
+
+      // ===== BULK LISTER: LISTING COMPLETE SIGNAL =====
+      // Sent by ebay-prelist.ts content script when eBay navigates away from prelist page.
+      // Routes the completion signal to the waiting promise in handleCreateEbayListing().
+      if (msgType === 'LISTING_COMPLETE') {
+        const tabId = sender.tab?.id;
+        if (tabId !== undefined) {
+          const result = message.payload as { success: boolean; error?: string };
+          resolveListingCompletion(tabId, result);
+        }
+        return { success: true };
       }
 
       return { success: false, error: 'Unknown message type' };
