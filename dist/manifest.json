@@ -129,7 +129,7 @@
     },
     {
       "js": [
-        "assets/ebay-prelist.ts-e1c2eeeb.js"
+        "assets/ebay-prelist.ts-5bc9e25c.js"
       ],
       "matches": [
         "*://*.ebay.com/sl/prelist*",
@@ -222,7 +222,7 @@
       ],
       "resources": [
         "assets/ebay-order-extractor.ts-87d4c536.js",
-        "assets/ebay-prelist.ts-e1c2eeeb.js",
+        "assets/ebay-prelist.ts-5bc9e25c.js",
         "assets/finance-ebay-scanner.ts-5c7dc805.js"
       ],
       "use_dynamic_url": false
