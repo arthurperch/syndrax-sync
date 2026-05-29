@@ -112,22 +112,35 @@ async function fillListingForm(data: ListingData): Promise<{ filled: number; sum
 
   await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // Title
-  if (fillInput(SELECTORS.title, data.title)) {
-    filled++;
-    summary.push('✓ Title filled');
+  // Title — only fill if eBay hasn't auto-populated it from ASIN import
+  const titleEl = document.querySelector<HTMLInputElement>(SELECTORS.title);
+  if (titleEl && !titleEl.value.trim()) {
+    if (fillInput(SELECTORS.title, data.title)) {
+      filled++;
+      summary.push('✓ Title filled');
+    } else {
+      summary.push('✗ Title not found');
+    }
+  } else if (titleEl?.value.trim()) {
+    summary.push('↩ Title kept (eBay auto-filled)');
   } else {
-    summary.push('✗ Title not found');
+    summary.push('✗ Title field missing');
   }
 
-  // Description
-  const descriptionFilled = fillInput(SELECTORS.description, data.description) ||
-                            fillRichTextEditor('.ql-editor', data.description);
-  if (descriptionFilled) {
-    filled++;
-    summary.push('✓ Description filled');
+  // Description — only fill if empty
+  const descEl = document.querySelector<HTMLTextAreaElement | HTMLElement>(SELECTORS.description);
+  const descEmpty = !descEl || !(descEl as HTMLInputElement).value?.trim() && !descEl.textContent?.trim();
+  if (descEmpty && data.description) {
+    const descriptionFilled = fillInput(SELECTORS.description, data.description) ||
+                              fillRichTextEditor('.ql-editor', data.description);
+    if (descriptionFilled) {
+      filled++;
+      summary.push('✓ Description filled');
+    } else {
+      summary.push('✗ Description not found');
+    }
   } else {
-    summary.push('✗ Description not found');
+    summary.push('↩ Description kept (eBay auto-filled)');
   }
 
   // Price
@@ -230,7 +243,11 @@ async function init(): Promise<void> {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'FILL_LISTING') {
-    const data = message.payload as ListingData;
+    const data = message.payload as ListingData | undefined;
+    if (!data) {
+      sendResponse({ success: false, filled: 0 });
+      return true;
+    }
     fillListingForm(data).then(({ filled }) => {
       sendResponse({ success: filled > 0, filled });
     });

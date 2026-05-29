@@ -97,6 +97,11 @@ action: {
       run_at: 'document_end'
     },
     {
+      matches: ['*://*.ebay.com/sl/prelist*', '*://*.ebay.com/sl/prelist/home*'],
+      js: ['src/content/ebay-prelist.ts'],
+      run_at: 'document_end'
+    },
+    {
       matches: ['*://*.ebay.com/sl/sell*', '*://*.ebay.com/sell/list*', '*://*.ebay.com/sell/create*'],
       js: ['src/content/ebay-listing-creator.ts'],
       run_at: 'document_end'

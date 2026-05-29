@@ -88,10 +88,10 @@ export async function handleCreateEbayListing(payload: {
 
   await chrome.storage.local.set({ pendingListing });
 
-  // Try the Quick Listing Tool first (/sell/list), fall back to /sl/sell.
-  // Both are matched by ebay-listing-creator.ts via manifest.
+  // Open eBay's prelist page — content script auto-submits ASIN via Product ID tab.
+  // After eBay creates the draft, ebay-listing-creator.ts sets the price.
   const tab = await chrome.tabs.create({
-    url: 'https://www.ebay.com/sell/list',
+    url: 'https://www.ebay.com/sl/prelist/home',
     active: true,
   });
 
