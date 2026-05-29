@@ -98,7 +98,7 @@ action: {
     },
     {
       matches: ['*://*.ebay.com/sl/prelist*', '*://*.ebay.com/sl/prelist/home*'],
-      js: ['src/content/ebay-prelist.ts'],
+              js: ['src/content/ebay-prelist.ts', 'src/content/ebay-prelist-controller.ts'],
       run_at: 'document_end'
     },
     {
