@@ -353,9 +353,13 @@ async function fillSku(sku: string): Promise<void> {
 // Fallback: drop event on the dropzone.
 
 async function fillImages(images: string[]): Promise<boolean> {
-  if (!images || images.length === 0) return false;
+  if (!images || images.length === 0) {
+    await debugLog('fillImages', 'No images provided');
+    return false;
+  }
 
   const urls = images.slice(0, 8);
+  await debugLog('fillImages', `Starting with ${urls.length} image URLs`);
 
   // NOTE: Direct file injection (fehelix-uploader, DataTransfer drop) was attempted
   // and confirmed BROKEN — all events fire but eBay checks event.isTrusted=false
@@ -372,6 +376,7 @@ async function fillImages(images: string[]): Promise<boolean> {
 
   if (seePhotoBtn2) {
     log('Clicking "See photo options" + watching for dropdown...', 'info');
+    await debugLog('fillImages', 'Found "See photo options" button');
 
     // Watch for new elements added to DOM after click
     const newEls: string[] = [];
@@ -405,6 +410,7 @@ async function fillImages(images: string[]): Promise<boolean> {
 
     observer.disconnect();
     log(`[Dropdown] ${newEls.length} new elements found after click`, 'info');
+    await debugLog('fillImages', `Dropdown rendered ${newEls.length} new elements`);
 
     // Now try to find "Upload from web" toggle in whatever appeared
     // Try every possible selector pattern
@@ -424,6 +430,7 @@ async function fillImages(images: string[]): Promise<boolean> {
 
     if (webToggleEl) {
       log(`Found web toggle: "${webToggleEl.textContent?.trim()}" | ${webToggleEl.tagName}.${webToggleEl.className.toString().slice(0,30)}`, 'info');
+      await debugLog('fillImages', `Found web toggle: "${webToggleEl.textContent?.trim()}"`);
       await realClick(webToggleEl);
       await sleep(800);
 
@@ -432,6 +439,7 @@ async function fillImages(images: string[]): Promise<boolean> {
       await sleep(400);
     } else {
       log('[Dropdown] "Upload from web" toggle NOT found — closing dropdown via Escape', 'warn');
+      await debugLog('fillImages', 'ERROR: "Upload from web" toggle NOT found');
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await sleep(300);
     }
@@ -446,38 +454,53 @@ async function fillImages(images: string[]): Promise<boolean> {
 
     if (uploadFromWebBtn) {
       log(`Clicking new button: "${uploadFromWebBtn.textContent?.trim()}"`, 'info');
+      await debugLog('fillImages', `Clicking "Upload from web" button`);
       await realClick(uploadFromWebBtn);
       await sleep(600);
     }
   }
 
   // Step 4: Look for URL input fields — try multiple selector patterns
+  await debugLog('fillImages', 'Step 4: Searching for URL input field...');
   const urlInput = await waitFor<HTMLInputElement>(() => {
-    return (
-      // eBay's actual placeholder text (try variations)
-      document.querySelector<HTMLInputElement>('input[placeholder*="Enter URL" i]') ||
-      document.querySelector<HTMLInputElement>('input[placeholder*="url" i]') ||
-      document.querySelector<HTMLInputElement>('input[placeholder*="link" i]') ||
-      document.querySelector<HTMLInputElement>('input[placeholder*="photo" i]') ||
-      // Fallback: any input in photo/image section that's not already filled
-      (() => {
-        const photoSection = document.querySelector('[class*="photo"], [class*="image"], [class*="upload"]');
-        if (!photoSection) return null;
-        const inputs = photoSection.querySelectorAll<HTMLInputElement>('input[type="text"], input:not([type])');
-        return Array.from(inputs).find(inp => inp.offsetParent !== null && !inp.value) ?? null;
-      })()
-    ) ?? null;
+    const candidates = [
+      document.querySelector<HTMLInputElement>('input[placeholder*="Enter URL" i]'),
+      document.querySelector<HTMLInputElement>('input[placeholder*="url" i]'),
+      document.querySelector<HTMLInputElement>('input[placeholder*="link" i]'),
+      document.querySelector<HTMLInputElement>('input[placeholder*="photo" i]'),
+    ].filter(Boolean);
+    
+    if (candidates.length > 0) {
+      log(`Found ${candidates.length} URL input candidate(s)`, 'info');
+      return candidates[0] ?? null;
+    }
+    
+    // Fallback: any input in photo/image section that's not already filled
+    const photoSection = document.querySelector('[class*="photo"], [class*="image"], [class*="upload"]');
+    if (!photoSection) {
+      return null;
+    }
+    
+    const inputs = photoSection.querySelectorAll<HTMLInputElement>('input[type="text"], input:not([type])');
+    const result = Array.from(inputs).find(inp => inp.offsetParent !== null && !inp.value) ?? null;
+    if (result) {
+      log(`Found URL input via fallback selector: placeholder="${result.placeholder}"`, 'info');
+    }
+    return result;
   }, 2500);
 
   if (urlInput) {
+    await debugLog('fillImages', `✅ URL input field FOUND! placeholder="${urlInput.placeholder}", visible=${urlInput.offsetParent !== null}`);
     const allUrlInputs = Array.from(document.querySelectorAll<HTMLInputElement>(
       'input[placeholder*="Enter URL" i], input[placeholder*="url" i], input[placeholder*="link" i], input[placeholder*="photo" i]'
     )).filter(inp => inp.offsetParent !== null);
+    
     let filled = 0;
     for (let i = 0; i < Math.min(urls.length, allUrlInputs.length); i++) {
       const inp = allUrlInputs[i];
       inp.focus();
       setInputValue(inp, urls[i]);
+      await debugLog('fillImages', `Filled URL input ${i+1}: ${urls[i].slice(0, 60)}...`);
       await sleep(200);
       inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       inp.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
@@ -489,15 +512,23 @@ async function fillImages(images: string[]): Promise<boolean> {
         const t = b.textContent?.trim().toLowerCase() || '';
         return t === 'add' || t === 'go' || t === 'import';
       });
-      if (addBtn) { await sleep(200); await realClick(addBtn); }
+      if (addBtn) { 
+        await sleep(200); 
+        await realClick(addBtn); 
+        await debugLog('fillImages', `Clicked "Add" button`);
+      }
       log(`Images → URL import (${filled} URLs)`, 'success');
+      await debugLog('fillImages', `✅ SUCCESS: ${filled} images injected via URL import`);
       return true;
     }
+  } else {
+    await debugLog('fillImages', `❌ URL input field NOT FOUND after 2.5s timeout`);
   }
 
   // All file-injection strategies are blocked by event.isTrusted=false.
   // Show image URLs in the status overlay for manual "Upload from web" paste.
   log('⚠ Auto-upload blocked by eBay security (isTrusted) — URLs below:', 'warn');
+  await debugLog('fillImages', '⚠ Falling back to manual upload mode');
   urls.slice(0, 3).forEach((u, i) => log(`IMG ${i+1}: ${u.slice(0, 90)}`, 'info'));
 
   // Also inject URLs into page as a visible helper element
@@ -764,7 +795,11 @@ async function init(): Promise<void> {
 
 // Start after Marko hydration
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 1200));
+  document.addEventListener('DOMContentLoaded', () => {
+    initFileLog().catch(() => {});
+    setTimeout(init, 1200);
+  });
 } else {
+  initFileLog().catch(() => {});
   setTimeout(init, 1200);
 }
