@@ -1,3 +1,10 @@
+# Secrets and webhook files
+discord_webhooks.json
+*.env
+.env*
+webhooks.config.ts
+secrets.json
+
 # Dependencies
 node_modules/
 
