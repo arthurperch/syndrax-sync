@@ -171,16 +171,27 @@ async function scrapeSearchResults(tabId: number): Promise<AmazonProduct[]> {
                 }
               }
 
-              // Extract review count
+              // Extract review count — look for standalone number near the star rating
+              // Amazon renders count as: <span class="a-size-base s-underline-text">1,234</span>
+              // The aria-label "4.5 out of 5 stars" must NOT be used for the count (wrong number)
               let reviewCount = 0;
-              const reviewEl = element.querySelector('[aria-label*="rating"]') ||
-                               element.querySelector('[aria-label*="stars"]');
-              if (reviewEl) {
-                const reviewText = reviewEl.getAttribute('aria-label') || '';
-                const match = reviewText.match(/([\d,]+)\s*(rating|star)/i);
-                if (match) {
-                  reviewCount = parseInt(match[1].replace(/,/g, ''));
-                }
+              const countSelectors = [
+                'span.a-size-base.s-underline-text',
+                'span.a-size-base.s-underline-link-text',
+                '[aria-label*="ratings"] span',
+                'span.a-size-base[aria-hidden="false"]',
+              ];
+              for (const cs of countSelectors) {
+                const countEl = element.querySelector(cs);
+                const rawText = countEl?.textContent?.replace(/,/g, '').trim() || '';
+                const parsed = parseInt(rawText);
+                if (!isNaN(parsed) && parsed > 0) { reviewCount = parsed; break; }
+              }
+              // Fallback: scan aria-label for "N ratings" (not "5 stars")
+              if (reviewCount === 0) {
+                const ratingLinkEl = element.querySelector('[aria-label*="ratings"]');
+                const ratingLabelMatch = ratingLinkEl?.getAttribute('aria-label')?.match(/([\d,]+)\s+rating/i);
+                if (ratingLabelMatch) reviewCount = parseInt(ratingLabelMatch[1].replace(/,/g, ''));
               }
 
               // Extract image URL

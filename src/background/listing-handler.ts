@@ -16,15 +16,9 @@ export function handleCheckVero(title: string, brand: string): { blocked: boolea
   return { blocked: false, reason: '' };
 }
 
-// ─── Completion tracking ──────────────────────────────────────────────────────
-// Maps tabId → resolver function. When the content script sends LISTING_COMPLETE
-// for that tab, we resolve the promise and the caller unblocks.
+// Maps tabId → resolver. Resolved when content script sends LISTING_COMPLETE.
 export const pendingListingResolvers: Map<number, (result: { success: boolean; error?: string }) => void> = new Map();
 
-/**
- * Called by the background message handler when a LISTING_COMPLETE message
- * arrives from the ebay-prelist content script.
- */
 export function resolveListingCompletion(tabId: number, result: { success: boolean; error?: string }): void {
   const resolver = pendingListingResolvers.get(tabId);
   if (resolver) {
@@ -43,30 +37,29 @@ export async function handleCreateEbayListing(payload: {
 }): Promise<{ success: boolean; error?: string }> {
   const { asin, ebayPrice, title, description, condition, quantity } = payload;
 
-  // Store listing data for the content script to pick up
   await chrome.storage.local.set({
     pendingListing: { title, description, price: ebayPrice, condition, quantity, images: [], asin }
   });
 
-  // Open eBay's prelist page — content script auto-submits ASIN via Product ID tab.
-  const tab = await chrome.tabs.create({ url: 'https://www.ebay.com/sl/prelist/home', active: true });
+  // Pass title via URL param — eBay pre-fills the keyword search box.
+  // ebay-prelist.ts clicks Search → skips match → selects New → Continue to listing.
+  const tab = await chrome.tabs.create({
+    url: `https://www.ebay.com/sl/prelist/home?title=${encodeURIComponent(title)}`,
+    active: true,
+  });
   const tabId = tab.id!;
 
-  // Return a promise that resolves when the content script sends LISTING_COMPLETE
-  // or rejects after a 90-second timeout (eBay can be slow).
   return new Promise<{ success: boolean; error?: string }>((resolve) => {
     const TIMEOUT_MS = 90_000;
 
     const timer = setTimeout(() => {
       pendingListingResolvers.delete(tabId);
-      // Close the tab on timeout to avoid orphaned tabs
       chrome.tabs.remove(tabId).catch(() => {});
       resolve({ success: false, error: 'Listing timed out after 90 seconds' });
     }, TIMEOUT_MS);
 
     pendingListingResolvers.set(tabId, (result) => {
       clearTimeout(timer);
-      // Close the tab once listing is done
       chrome.tabs.remove(tabId).catch(() => {});
       resolve(result);
     });
