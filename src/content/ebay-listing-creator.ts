@@ -353,12 +353,75 @@ async function fillSku(sku: string): Promise<void> {
 // Fallback: drop event on the dropzone.
 
 async function fillImages(images: string[]): Promise<boolean> {
+  // Helper: Send checkpoint event to debug server
+  async function recordCheckpoint(
+    stepId: string,
+    status: 'success' | 'error' | 'pending',
+    details?: Record<string, any>
+  ): Promise<void> {
+    try {
+      const payload = {
+        step: stepId,
+        status,
+        details: details || {},
+      };
+      
+      await fetch('http://127.0.0.1:3000/debug/checkpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {
+        console.log(`[Checkpoint] ${stepId}: ${status}`, details);
+      });
+    } catch (e) {
+      // Silent fail
+    }
+  }
+
+  // Helper: Capture DOM snapshot at a specific step
+  async function captureDOM(stepId: string, selector: string = 'body'): Promise<void> {
+    try {
+      const el = document.querySelector(selector);
+      if (!el) {
+        console.warn(`[DebugDOM] Selector '${selector}' not found for snapshot '${stepId}'`);
+        return;
+      }
+
+      const html = el.outerHTML;
+      const context = {
+        selector,
+        elementTag: el.tagName,
+        elementClass: el.className,
+        elementId: el.id,
+        childCount: el.children.length,
+        timestamp: new Date().toISOString(),
+      };
+
+      const payload = {
+        stepId,
+        html,
+        context,
+      };
+
+      await fetch('http://127.0.0.1:3000/debug/dom-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {
+        console.log(`[DebugDOM] Captured snapshot '${stepId}' (server not running)`);
+      });
+    } catch (e) {
+      console.error(`[DebugDOM] Error capturing snapshot '${stepId}':`, e);
+    }
+  }
+
   if (!images || images.length === 0) {
     await debugLog('fillImages', 'No images provided');
     return false;
   }
 
   const urls = images.slice(0, 8);
+  await recordCheckpoint('step1-start', 'success', { imageCount: urls.length });
   await debugLog('fillImages', `Starting with ${urls.length} image URLs`);
 
   // NOTE: Direct file injection (fehelix-uploader, DataTransfer drop) was attempted
@@ -375,6 +438,7 @@ async function fillImages(images: string[]): Promise<boolean> {
   });
 
   if (seePhotoBtn2) {
+    await recordCheckpoint('step2-see-photo-found', 'success', { buttonText: seePhotoBtn2.textContent?.trim() });
     log('Clicking "See photo options" + watching for dropdown...', 'info');
     await debugLog('fillImages', 'Found "See photo options" button');
 
@@ -409,6 +473,8 @@ async function fillImages(images: string[]): Promise<boolean> {
     await sleep(1000); // Give dropdown time to render
 
     observer.disconnect();
+    await recordCheckpoint('step3-dropdown-rendered', 'success', { newElementCount: newEls.length });
+    await captureDOM('step3-dropdown-html', 'body');
     log(`[Dropdown] ${newEls.length} new elements found after click`, 'info');
     await debugLog('fillImages', `Dropdown rendered ${newEls.length} new elements`);
 
@@ -429,6 +495,11 @@ async function fillImages(images: string[]): Promise<boolean> {
     );
 
     if (webToggleEl) {
+      await recordCheckpoint('step4-web-toggle-found', 'success', { 
+        toggleText: webToggleEl.textContent?.trim(),
+        toggleTag: webToggleEl.tagName,
+      });
+      await captureDOM('step4-web-toggle-html', '.photo-section, [class*="photo"]');
       log(`Found web toggle: "${webToggleEl.textContent?.trim()}" | ${webToggleEl.tagName}.${webToggleEl.className.toString().slice(0,30)}`, 'info');
       await debugLog('fillImages', `Found web toggle: "${webToggleEl.textContent?.trim()}"`);
       await realClick(webToggleEl);
@@ -461,6 +532,7 @@ async function fillImages(images: string[]): Promise<boolean> {
   }
 
   // Step 4: Look for URL input fields — try multiple selector patterns
+  await recordCheckpoint('step5-url-search-start', 'pending', {});
   await debugLog('fillImages', 'Step 4: Searching for URL input field...');
   const urlInput = await waitFor<HTMLInputElement>(() => {
     const candidates = [
@@ -490,6 +562,11 @@ async function fillImages(images: string[]): Promise<boolean> {
   }, 2500);
 
   if (urlInput) {
+    await recordCheckpoint('step6-url-input-found', 'success', {
+      placeholder: urlInput.placeholder,
+      visible: urlInput.offsetParent !== null,
+    });
+    await captureDOM('step6-url-input-html', '[class*="photo"], [class*="image"], [class*="upload"]');
     await debugLog('fillImages', `✅ URL input field FOUND! placeholder="${urlInput.placeholder}", visible=${urlInput.offsetParent !== null}`);
     const allUrlInputs = Array.from(document.querySelectorAll<HTMLInputElement>(
       'input[placeholder*="Enter URL" i], input[placeholder*="url" i], input[placeholder*="link" i], input[placeholder*="photo" i]'
@@ -500,6 +577,10 @@ async function fillImages(images: string[]): Promise<boolean> {
       const inp = allUrlInputs[i];
       inp.focus();
       setInputValue(inp, urls[i]);
+      await recordCheckpoint(`step7-url-filled-${i+1}`, 'success', {
+        urlIndex: i,
+        urlPreview: urls[i].slice(0, 60),
+      });
       await debugLog('fillImages', `Filled URL input ${i+1}: ${urls[i].slice(0, 60)}...`);
       await sleep(200);
       inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -522,6 +603,10 @@ async function fillImages(images: string[]): Promise<boolean> {
       return true;
     }
   } else {
+    await recordCheckpoint('step6-url-input-missing', 'error', {
+      message: 'No URL input field found after 2.5s wait',
+    });
+    await captureDOM('step6-url-failed-html', 'body');
     await debugLog('fillImages', `❌ URL input field NOT FOUND after 2.5s timeout`);
   }
 

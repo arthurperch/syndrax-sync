@@ -8,7 +8,8 @@
     "tabs",
     "activeTab",
     "scripting",
-    "alarms"
+    "alarms",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "*://*.ebay.com/*",
@@ -118,7 +119,7 @@
         "assets/ebay-sync-controller.ts-loader-8caa417e.js",
         "assets/listing-optimizer.ts-4ed993c7.js",
         "assets/ebay-inventory-scanner.ts-d216a6e3.js",
-        "assets/ebay-listing-creator.ts-5dc93f5d.js"
+        "assets/ebay-listing-creator.ts-1b77f865.js"
       ],
       "matches": [
         "*://*.ebay.com/sh/lst/*",
@@ -140,7 +141,7 @@
     },
     {
       "js": [
-        "assets/ebay-listing-creator.ts-5dc93f5d.js"
+        "assets/ebay-listing-creator.ts-1b77f865.js"
       ],
       "matches": [
         "*://*.ebay.com/sl/sell*",
@@ -272,7 +273,7 @@
         "assets/ebay-sync-controller.ts-481d7296.js",
         "assets/listing-optimizer.ts-4ed993c7.js",
         "assets/ebay-inventory-scanner.ts-d216a6e3.js",
-        "assets/ebay-listing-creator.ts-5dc93f5d.js"
+        "assets/ebay-listing-creator.ts-1b77f865.js"
       ],
       "use_dynamic_url": false
     },

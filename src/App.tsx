@@ -23,6 +23,7 @@ import ImagePipeline from './pages/ImagePipeline';
 import PricingDashboard from './pages/PricingDashboard';
 import InventoryLifecycle from './pages/InventoryLifecycle';
 import BugPanel from './pages/BugPanel';
+import Agents from './pages/Agents';
 import { logger } from './services/bug-logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -897,6 +898,7 @@ export default function App() {
     images:       ({ onBack }) => <ImagePipeline onBack={onBack} />,
     pricing:      ({ onBack }) => <PricingDashboard onBack={onBack} />,
     lifecycle:    ({ onBack }) => <InventoryLifecycle onBack={onBack} />,
+    agents:       ({ onBack }) => <Agents />,
     bugs:         ({ onBack }) => <BugPanel onBack={onBack} />,
   };
 

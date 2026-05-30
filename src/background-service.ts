@@ -776,6 +776,72 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
         return { success: true };
       }
 
+      // ─── AGENTS CONTROL ─────────────────────────────────────────────────────────
+      if (msgType === 'CHECK_AGENT_STATUS') {
+        try {
+          chrome.runtime.sendNativeMessage(
+            'syndrax.agents',
+            { command: 'status' },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (sendResponse as any)({
+                  debugServer: { running: false },
+                  hermesAgent: { running: false },
+                  lastCheck: Date.now(),
+                });
+              } else if (response) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (sendResponse as any)({
+                  debugServer: response.debugServer || { running: false },
+                  hermesAgent: response.hermesAgent || { running: false },
+                  lastCheck: Date.now(),
+                });
+              } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (sendResponse as any)({
+                  debugServer: { running: false },
+                  hermesAgent: { running: false },
+                  lastCheck: Date.now(),
+                });
+              }
+            }
+          );
+          return true;
+        } catch (e) {
+          return {
+            debugServer: { running: false },
+            hermesAgent: { running: false },
+            lastCheck: Date.now(),
+          };
+        }
+      }
+
+      if (msgType === 'EXECUTE_AGENT_COMMAND') {
+        const command = (message as { command: string }).command;
+        try {
+          chrome.runtime.sendNativeMessage(
+            'syndrax.agents',
+            { command },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (sendResponse as any)({ success: false, error: 'Native host not available' });
+              } else if (response?.success) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (sendResponse as any)({ success: true, message: response.message });
+              } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (sendResponse as any)({ success: false, error: response?.error || 'Unknown error' });
+              }
+            }
+          );
+          return true;
+        } catch (e) {
+          return { success: false, error: (e as Error).message };
+        }
+      }
+
       return { success: false, error: 'Unknown message type' };
     }
   }
