@@ -448,6 +448,7 @@ class BulkListingEngine {
       asin,
       ebayPrice: data.ebayPrice,
       title: data.title,
+      image: data.image || undefined,
       listingType: data.listingType,
     });
   }

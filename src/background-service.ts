@@ -473,7 +473,12 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
             const price = parseFloat((priceEl?.textContent || '0').replace(/[^0-9.]/g, '')) || 0;
             const asinMatch = window.location.href.match(/\/dp\/([A-Z0-9]{10})/);
             const asin = asinMatch?.[1] || '';
-            const mainImage = (document.querySelector('#landingImage, #imgBlkFront') as HTMLImageElement)?.src || '';
+            const imgEl = document.querySelector('#landingImage, #imgBlkFront') as HTMLImageElement | null;
+            const mainImage =
+              imgEl?.getAttribute('data-old-hires') ||
+              imgEl?.getAttribute('data-a-hires') ||
+              (imgEl?.src?.includes('._') ? imgEl.src.replace(/\._[^.]+_\./, '.') : imgEl?.src) ||
+              '';
             if (!title) return null;
             return { title, price, asin, mainImage };
           };
@@ -557,6 +562,7 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           asin: string;
           ebayPrice: number;
           title: string;
+          image?: string;
           description?: string;
           condition?: string;
           quantity?: number;

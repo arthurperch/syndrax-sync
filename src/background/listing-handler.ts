@@ -37,15 +37,16 @@ export async function handleCreateEbayListing(payload: {
   asin: string;
   ebayPrice: number;
   title: string;
+  image?: string;
   description?: string;
   condition?: string;
   quantity?: number;
 }): Promise<{ success: boolean; error?: string }> {
-  const { asin, ebayPrice, title, description, condition, quantity } = payload;
+  const { asin, ebayPrice, title, image, description, condition, quantity } = payload;
 
   // Store listing data for the content script to pick up
   await chrome.storage.local.set({
-    pendingListing: { title, description, price: ebayPrice, condition, quantity, images: [], asin }
+    pendingListing: { title, description, price: ebayPrice, condition, quantity, images: image ? [image] : [], asin }
   });
 
   // Open eBay's prelist page — content script auto-submits ASIN via Product ID tab.
