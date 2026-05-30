@@ -102,7 +102,7 @@ action: {
       run_at: 'document_end'
     },
     {
-      matches: ['*://*.ebay.com/sl/sell*', '*://*.ebay.com/sell/list*', '*://*.ebay.com/sell/create*'],
+      matches: ['*://*.ebay.com/sl/sell*', '*://*.ebay.com/sell/list*', '*://*.ebay.com/sell/create*', '*://*.ebay.com/lstng*'],
       js: ['src/content/ebay-listing-creator.ts'],
       run_at: 'document_end'
     },

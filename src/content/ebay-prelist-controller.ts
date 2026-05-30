@@ -51,96 +51,97 @@ export function navigateToPrelist(title: string): void {
 async function handlePrelistSearchPage(): Promise<boolean> {
   log('Handling prelist search page...', 'info');
 
-  // Wait for the search input to appear
+  // eBay prelist "Start listing with item info" page:
+  // The title is pre-filled in the search input from the URL param.
+  // We just need to find the input and click Search.
   const searchInput = await waitForElement(
-    'input[id*="keywords-box"][id*="input-textbox"], input[id*="keyword"], input[name="keywords"]',
+    // Modern eBay prelist selectors (2025+)
+    'input[type="search"], input[type="text"][value], input[placeholder*="item" i], input[placeholder*="search" i], input[placeholder*="title" i], .search-input input, input.textbox',
     10000
   ) as HTMLInputElement | null;
 
-  if (!searchInput) {
-    log('Search input not found', 'error');
-    return false;
+  // Fallback: grab any visible non-disabled text input on page
+  const fallbackInput = !searchInput
+    ? (Array.from(document.querySelectorAll('input[type="text"]:not([disabled]):not([readonly])'))
+        .find(el => (el as HTMLElement).offsetParent !== null) as HTMLInputElement | null)
+    : null;
+
+  const input = searchInput || fallbackInput;
+
+  if (!input) {
+    log('Search input not found — trying to click Search button directly', 'warn');
+  } else {
+    log(`Found search input: "${input.value?.substring(0, 40) || '(empty)'}"`, 'info');
+
+    // If input is empty, fill it from URL
+    if (!input.value.trim()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const title = urlParams.get('title') || '';
+      if (title) {
+        const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        if (nativeSetter) nativeSetter.call(input, title);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(300);
+        log(`Filled input with: "${title.substring(0, 50)}..."`, 'info');
+      }
+    }
   }
 
-  // Get the title from the URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const title = urlParams.get('title') || '';
-
-  if (!title) {
-    log('No title in URL params', 'warn');
-    return false;
-  }
-
-  log(`Entering title: ${title.substring(0, 50)}...`, 'info');
-
-  // Clear and fill the search input
-  searchInput.focus();
-  searchInput.value = '';
-  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-  await sleep(200);
-
-  // Type the title
-  const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-  if (nativeSetter) nativeSetter.call(searchInput, title);
-  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-  searchInput.dispatchEvent(new Event('change', { bubbles: true }));
-  await sleep(300);
-
-  // Click the search button
-  const searchBtn = document.querySelector(
-    '.keywords-search-im__field-button, button[type="submit"][class*="btn--primary"], button[aria-label*="search" i]'
-  ) as HTMLButtonElement | null;
+  // Find Search button by text content (most reliable across eBay redesigns)
+  const searchBtn = Array.from(document.querySelectorAll('button, input[type="submit"]')).find(el => {
+    const text = el.textContent?.trim().toLowerCase() || (el as HTMLInputElement).value?.toLowerCase() || '';
+    return text === 'search' || text === 'find a match' || text === 'search ebay';
+  }) as HTMLElement | null;
 
   if (searchBtn) {
-    log('Clicking search button...', 'info');
+    log(`Clicking search button: "${searchBtn.textContent?.trim()}"`, 'info');
     searchBtn.click();
     await sleep(3000);
-  } else {
-    // Try pressing Enter
-    searchInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-    await sleep(3000);
+    return true;
   }
 
-  return true;
+  // Last resort: press Enter on the input
+  if (input) {
+    log('No search button found — pressing Enter on input', 'warn');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+    await sleep(3000);
+    return true;
+  }
+
+  log('Search page handling failed', 'error');
+  return false;
 }
 
 // ─── STEP 3: Handle match/no-match decision ────────────────────────────────
 async function handleMatchDecision(): Promise<boolean> {
   log('Checking for match/no-match options...', 'info');
 
-  // Wait a bit for results to load
-  await sleep(2000);
+  // Wait for results to load
+  await sleep(2500);
 
-  // Check if "Continue without match" button exists
-  const continueWithoutMatch = await waitForElement(
-    '.prelist-radix__next-action, button[class*="secondary"][class*="btn"], a[class*="secondary"]',
-    8000
-  ) as HTMLElement | null;
+  // Search ALL buttons/links by text — most reliable across eBay redesigns
+  const keywords = ['continue without match', 'continue without', 'without a match', 'without match', 'skip', 'continue without selecting'];
 
-  if (continueWithoutMatch) {
-    const btnText = continueWithoutMatch.textContent?.trim().toLowerCase() || '';
-    if (btnText.includes('continue') || btnText.includes('without') || btnText.includes('skip')) {
-      log('Clicking "Continue without match"...', 'info');
-      continueWithoutMatch.click();
-      await sleep(2000);
-      return true;
+  // Poll for up to 8 seconds in case results load slowly
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    const allClickable = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+    for (const el of allClickable) {
+      const text = el.textContent?.trim().toLowerCase() || '';
+      if (keywords.some(kw => text.includes(kw))) {
+        log(`✓ Clicking: "${el.textContent?.trim()}"`, 'success');
+        (el as HTMLElement).click();
+        await sleep(2000);
+        return true;
+      }
     }
+    await sleep(400);
   }
 
-  // Also look for it by text
-  const allBtns = document.querySelectorAll('button, a[class*="btn"]');
-  for (const btn of allBtns) {
-    const text = btn.textContent?.trim().toLowerCase() || '';
-    if (text.includes('continue without') || text.includes('without a match') || text.includes('skip')) {
-      log(`Clicking: "${btn.textContent?.trim()}"`, 'info');
-      (btn as HTMLElement).click();
-      await sleep(2000);
-      return true;
-    }
-  }
-
-  // If no "continue without match" button, maybe a product was auto-matched — that's fine too
-  log('No "continue without match" button found — may have auto-matched or already past this step', 'warn');
+  // If no "continue without match" found — may have auto-matched, keep going
+  log('No "continue without match" button found — may have auto-matched', 'warn');
   return true;
 }
 
@@ -399,12 +400,9 @@ async function handlePrelistFlow(): Promise<void> {
   const { pendingListing } = await chrome.storage.local.get('pendingListing');
 
   if (isPrelistHome) {
-    log('On prelist search page', 'info');
-    const ok = await handlePrelistSearchPage();
-    if (!ok) {
-      log('Search page handling failed', 'error');
-      return;
-    }
+    // ebay-prelist.ts handles the full identify/search/match flow — skip here to avoid conflicts
+    log('On prelist search page — handled by ebay-prelist.ts, skipping controller', 'info');
+    return;
 
     // After search, handle match/no-match
     await sleep(2000);

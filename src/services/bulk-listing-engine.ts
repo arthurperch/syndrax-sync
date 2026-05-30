@@ -22,7 +22,7 @@ import type { PipelineStep, SyndraxError } from './error-tracker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ListingType = 'standard' | 'opti' | 'chat' | 'seo';
+export type ListingType = 'rival' | 'opti' | 'chat' | 'seo';
 
 export type AsinStatus =
   | 'PENDING'
@@ -362,6 +362,7 @@ class BulkListingEngine {
       ebayPrice,
       image: amazonData.image,
       brand: amazonData.brand,
+      description: amazonData.description,
       listingType: config.listingType,
     });
 
@@ -399,12 +400,14 @@ class BulkListingEngine {
     price: number;
     image: string;
     brand: string;
+    description: string;
   } | null> {
     const result = await bgMessage<{
       title?: string;
       price?: number;
       image?: string;
       brand?: string;
+      description?: string;
       error?: string;
     }>('FETCH_AMAZON_PRODUCT', { asin });
 
@@ -424,6 +427,7 @@ class BulkListingEngine {
       price: result.price ?? 0,
       image: result.image ?? '',
       brand: result.brand ?? '',
+      description: result.description ?? '',
     };
   }
 
@@ -442,12 +446,15 @@ class BulkListingEngine {
     ebayPrice: number;
     image?: string;
     brand?: string;
+    description?: string;
     listingType: ListingType;
   }): Promise<{ success: boolean; error?: string } | null> {
     return bgMessage<{ success: boolean; error?: string }>('CREATE_EBAY_LISTING', {
       asin,
       ebayPrice: data.ebayPrice,
       title: data.title,
+      image: data.image,
+      description: data.description,
       listingType: data.listingType,
     });
   }

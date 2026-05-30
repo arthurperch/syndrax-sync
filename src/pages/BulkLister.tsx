@@ -2,12 +2,13 @@
  * BulkLister.tsx — Syndrax Sync Bulk Lister
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   UploadCloud, Trash2, CheckCircle, XCircle, AlertTriangle,
   Loader, RefreshCw, X,
   ChevronRight, Zap, BarChart3, Play, Pause, Square,
   Settings, TrendingUp, List, ChevronDown, Download, ExternalLink,
+  Sparkles, Image as ImageIcon, DollarSign, ArrowUp, ArrowDown, Package,
 } from 'lucide-react';
 import {
   bulkEngine,
@@ -20,6 +21,12 @@ import {
 } from '../services/bulk-listing-engine';
 import { getErrorSummary } from '../services/error-tracker';
 import { downloadBulkUploadTemplate, type BulkUploadRow } from '../services/excel-generator';
+import type { OptiListItem, OptiListStorage } from '../types/opti-list';
+
+// ─── Background messaging helper ──────────────────────────────────────────────
+async function bgMsg<T = unknown>(type: string, payload?: unknown): Promise<T> {
+  return chrome.runtime.sendMessage({ type, payload });
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,11 +148,11 @@ function SyndraxLogoMark() {
 
 // ─── Listing type button ──────────────────────────────────────────────────────
 
-const LISTING_TYPES: { id: ListingType; label: string; desc: string }[] = [
-  { id: 'standard', label: 'Standard',  desc: 'Fast, basic listing' },
-  { id: 'opti',     label: 'Opti-List', desc: 'Optimized title + bullets' },
-  { id: 'chat',     label: 'Chat-List', desc: 'AI-written description' },
-  { id: 'seo',      label: 'SEO-List',  desc: 'SEO-optimized full listing' },
+const LISTING_TYPES: { id: ListingType; label: string; desc: string; recommended?: boolean }[] = [
+  { id: 'opti',  label: 'Opti-List', desc: 'AI title + bullets (recommended)', recommended: true },
+  { id: 'rival', label: 'Rival-List', desc: 'Beat competitor pricing & SEO' },
+  { id: 'chat',  label: 'Chat-List', desc: 'AI conversational description' },
+  { id: 'seo',   label: 'SEO-List',  desc: 'Max keyword density for Cassini' },
 ];
 
 // ─── Listing mode ─────────────────────────────────────────────────────────────
@@ -164,13 +171,15 @@ export default function BulkLister() {
   const [accountAgeWeeks, setAccountAgeWeeks] = useState(1);
   const [markup, setMarkup]         = useState(100);
   const [threads, setThreads]       = useState(3);
-  const [listingType, setListingType] = useState<ListingType>('standard');
+  const [listingType, setListingType] = useState<ListingType>('opti');
   const [minPrice, setMinPrice]     = useState(0);
   const [maxPrice, setMaxPrice]     = useState(0);
   const [fbaOnly, setFbaOnly]       = useState(false);
   const [closeErrors, setCloseErrors] = useState(true);
   const [maxRetries, setMaxRetries] = useState(2);
   const [showSettings, setShowSettings] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const DEBUG_ASIN = 'B00RW5OWLE';
 
   // ── Engine state (mirrored from bulkEngine) ────────────────────────────────
   const [engineStatus, setEngineStatus] = useState<BulkEngineState['status']>('IDLE');
@@ -186,10 +195,18 @@ export default function BulkLister() {
   const [expandedAsin, setExpandedAsin] = useState<string | null>(null);
 
   // ── Listing mode ───────────────────────────────────────────────────────────
-  const [listingMode, setListingMode] = useState<ListingMode>('bulk-upload');
+  const [listingMode, setListingMode] = useState<ListingMode>('prelist');
 
   // ── Description builder ────────────────────────────────────────────────────
   const [descBuilderAsin, setDescBuilderAsin] = useState<string | null>(null);
+
+  // ── Opti-List ──────────────────────────────────────────────────────────────
+  const [optiStorage, setOptiStorage]     = useState<OptiListStorage | null>(null);
+  const [optiInput, setOptiInput]         = useState('');
+  const [fetchingAsins, setFetchingAsins] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab]         = useState<'queue' | 'optilist'>('optilist');
+  const [editingMarkup, setEditingMarkup] = useState<Record<string, number>>({});
+  const optiPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const scheduleMin    = getScheduleMin(accountAgeWeeks);
@@ -360,6 +377,163 @@ export default function BulkLister() {
     setParsedEntries(prev => prev.filter(e => e.asin !== asin));
   }, [isActive]);
 
+  // ─── Opti-List handlers ───────────────────────────────────────────────────
+
+  const refreshOptiList = useCallback(async () => {
+    try {
+      const data = await bgMsg<OptiListStorage>('OPTI_GET_ALL');
+      setOptiStorage(data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    refreshOptiList();
+    // Poll for updates while fetching is active
+    optiPollRef.current = setInterval(refreshOptiList, 2000);
+    return () => { if (optiPollRef.current) clearInterval(optiPollRef.current); };
+  }, [refreshOptiList]);
+
+  const handleOptiImport = useCallback(async () => {
+    const entries = parseASINs(optiInput);
+    if (!entries.length) return;
+    const asins = entries.map(e => e.asin);
+
+    // Add items to list
+    await bgMsg('OPTI_ADD_ITEMS', { asins });
+    setOptiInput('');
+
+    // Auto-fetch ALL in parallel
+    setFetchingAsins(new Set(asins));
+    try {
+      await Promise.all(asins.map(asin => bgMsg('OPTI_FETCH_ASIN', { asin })));
+    } catch (err) {
+      console.error('[OptiList] Batch fetch error:', err);
+    } finally {
+      setFetchingAsins(new Set());
+      await refreshOptiList();
+    }
+  }, [optiInput, refreshOptiList]);
+
+  /** Manually fetch single item (for re-enrichment or recovery) */
+  const handleOptiFetch = useCallback(async (asin: string) => {
+    setFetchingAsins(prev => new Set(prev).add(asin));
+    try {
+      await bgMsg('OPTI_FETCH_ASIN', { asin });
+    } finally {
+      setFetchingAsins(prev => { const s = new Set(prev); s.delete(asin); return s; });
+      await refreshOptiList();
+    }
+  }, [refreshOptiList]);
+
+  /** Debug: run single ASIN B00RW5OWLE through full pipeline with uploader tracing */
+  const handleDebugTest = useCallback(async () => {
+    console.log(`[Debug] 🧪 Starting debug test for ${DEBUG_ASIN}`);
+    // Store debug flag so content scripts know to trace uploader events
+    await chrome.storage.local.set({ syndrax_debug_mode: true });
+
+    // Add + fetch the debug ASIN
+    await bgMsg('OPTI_ADD_ITEMS', { asins: [DEBUG_ASIN] });
+    await refreshOptiList();
+
+    setFetchingAsins(new Set([DEBUG_ASIN]));
+    try {
+      console.log(`[Debug] Fetching Amazon data for ${DEBUG_ASIN}...`);
+      await bgMsg('OPTI_FETCH_ASIN', { asin: DEBUG_ASIN });
+      console.log(`[Debug] Fetch complete — starting listing run`);
+    } finally {
+      setFetchingAsins(new Set());
+      await refreshOptiList();
+    }
+
+    // Immediately start a single-item run
+    const config: Partial<BulkEngineConfig> = {
+      threads: 1, listingType: 'opti',
+      markupPct: effectiveMarkup, minPrice: 0, maxPrice: 0,
+      fbaOnly: false, closeErrorTabs: false, maxRetries: 0,
+      dailyLimit: 1,
+    };
+    setJobs([{ asin: DEBUG_ASIN, status: 'PENDING', retries: 0 }]);
+    setProgress({ listed: 0, errors: 0, blocked: 0, skipped: 0, position: 0 });
+    setEngineStatus('RUNNING');
+    setActiveTab('queue');
+    await bulkEngine.start([DEBUG_ASIN], config);
+  }, [DEBUG_ASIN, refreshOptiList, effectiveMarkup]);
+
+  /** Paste session URLs from research phase */
+  const handlePasteSessionURLs = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setOptiInput(text);
+    } catch (err) {
+      console.warn('Clipboard access failed:', err);
+    }
+  }, []);
+
+  const handleOptiRemove = useCallback(async (asin: string) => {
+    await bgMsg('OPTI_REMOVE_ITEM', { asin });
+    await refreshOptiList();
+  }, [refreshOptiList]);
+
+  const handleOptiMarkupChange = useCallback(async (asin: string, newMarkup: number) => {
+    const item = optiStorage?.items[asin];
+    if (!item) return;
+    await bgMsg('OPTI_UPDATE_PRICING', {
+      asin,
+      cost: item.amazon.price,
+      markupPct: newMarkup,
+      quantity: item.pricing.quantity,
+    });
+    await refreshOptiList();
+  }, [optiStorage, refreshOptiList]);
+
+  const handleOptiMoveUp = useCallback(async (asin: string) => {
+    if (!optiStorage) return;
+    const idx = optiStorage.order.indexOf(asin);
+    if (idx <= 0) return;
+    const newOrder = [...optiStorage.order];
+    [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+    await bgMsg('OPTI_REORDER', { order: newOrder });
+    await refreshOptiList();
+  }, [optiStorage, refreshOptiList]);
+
+  const handleOptiMoveDown = useCallback(async (asin: string) => {
+    if (!optiStorage) return;
+    const idx = optiStorage.order.indexOf(asin);
+    if (idx < 0 || idx >= optiStorage.order.length - 1) return;
+    const newOrder = [...optiStorage.order];
+    [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+    await bgMsg('OPTI_REORDER', { order: newOrder });
+    await refreshOptiList();
+  }, [optiStorage, refreshOptiList]);
+
+  /** Start bulk run directly from Opti-List (uses stored opti data) */
+  const handleOptiStartRun = useCallback(async () => {
+    if (!optiStorage) return;
+    const readyAsins = optiStorage.order
+      .map(a => optiStorage.items[a])
+      .filter(item => item && item.status === 'READY' && item.pricing.ebayPrice > 0)
+      .map(item => item.asin);
+
+    if (!readyAsins.length) return;
+
+    const config: Partial<BulkEngineConfig> = {
+      threads: 1, // One at a time for prelist flow
+      listingType: 'opti',
+      markupPct: effectiveMarkup,
+      minPrice: 0, maxPrice: 0, fbaOnly: false,
+      closeErrorTabs: closeErrors,
+      maxRetries,
+      dailyLimit: DAILY_LIMIT - dailyCount,
+    };
+
+    setJobs(readyAsins.map(asin => ({ asin, status: 'PENDING', retries: 0 })));
+    setProgress({ listed: 0, errors: 0, blocked: 0, skipped: 0, position: 0 });
+    setEngineStatus('RUNNING');
+    setActiveTab('queue');
+
+    await bulkEngine.start(readyAsins, config);
+  }, [optiStorage, effectiveMarkup, closeErrors, maxRetries, dailyCount]);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -397,7 +571,282 @@ export default function BulkLister() {
         {/* ── LEFT COLUMN ── */}
         <div className="space-y-5">
 
-          {/* Input card */}
+          {/* Tab switcher: Opti-List | Queue */}
+          <div className="flex gap-1 rounded-xl border border-slate-800/60 bg-slate-900/50 p-1">
+            <button
+              onClick={() => setActiveTab('optilist')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-colors ${
+                activeTab === 'optilist'
+                  ? 'bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-300'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Opti-List
+              {optiStorage && optiStorage.order.length > 0 && (
+                <span className="rounded-full bg-fuchsia-500/30 px-1.5 py-0.5 text-[9px] text-fuchsia-300">
+                  {optiStorage.order.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('queue')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-colors ${
+                activeTab === 'queue'
+                  ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <List className="h-3.5 w-3.5" />
+              Queue
+              {jobs.length > 0 && (
+                <span className="rounded-full bg-cyan-500/30 px-1.5 py-0.5 text-[9px] text-cyan-300">
+                  {jobs.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* ── OPTI-LIST PANEL ── */}
+          {activeTab === 'optilist' && (
+            <div className="space-y-4">
+
+              {/* Import box */}
+              <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="h-4 w-4 text-fuchsia-400" />
+                  <h2 className="text-sm font-semibold text-white">Bulk Add & Auto-Fetch</h2>
+                </div>
+                <textarea
+                  className="w-full rounded-lg border border-slate-700/60 bg-slate-800/60 px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-fuchsia-500/50 resize-none"
+                  rows={3}
+                  placeholder="Paste Amazon URLs or ASINs (one per line)&#10;Clicking 'Add & Fetch All' will auto-enrich all items in parallel"
+                  value={optiInput}
+                  onChange={e => setOptiInput(e.target.value)}
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <button
+                    onClick={handleOptiImport}
+                    disabled={!optiInput.trim() || fetchingAsins.size > 0}
+                    className="flex items-center gap-1.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 disabled:opacity-40 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                  >
+                    {fetchingAsins.size > 0
+                      ? <Loader className="h-3 w-3 animate-spin" />
+                      : <Package className="h-3 w-3" />
+                    }
+                    {fetchingAsins.size > 0 ? `Fetching (${fetchingAsins.size})…` : 'Add & Fetch All'}
+                  </button>
+
+                  <button
+                    onClick={handlePasteSessionURLs}
+                    className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
+                  >
+                    📋 Paste Session
+                  </button>
+
+                  {optiStorage && optiStorage.order.length > 0 && (
+                    <button
+                      onClick={() => bgMsg('OPTI_CLEAR').then(refreshOptiList)}
+                      className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-red-400 hover:border-red-500/40 transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  )}
+
+                  {optiStorage && optiStorage.order.some(a => optiStorage.items[a]?.status === 'READY') && (
+                    <button
+                      onClick={handleOptiStartRun}
+                      disabled={isActive}
+                      className="ml-auto flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+                    >
+                      <Play className="h-3 w-3" />
+                      Start Bulk Run ({optiStorage.order.filter(a => optiStorage.items[a]?.status === 'READY').length} ready)
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Opti-List item queue */}
+              {optiStorage && optiStorage.order.length > 0 ? (
+                <div className="space-y-2">
+                  {optiStorage.order.map((asin, idx) => {
+                    const item = optiStorage.items[asin];
+                    if (!item) return null;
+                    const isFetching = fetchingAsins.has(asin);
+                    const primaryImg = item.images.find(img => img.id === item.primaryImageId);
+                    const imgUrl = primaryImg?.url || item.amazon.mainImageUrl;
+
+                    const isBlocked = item.status === 'BLOCKED';
+                    const isVero = isBlocked && item.error?.code === 'VERO_BLOCKED';
+
+                    return (
+                      <div key={asin} className={`rounded-xl border p-4 transition-colors ${
+                        isVero                       ? 'border-orange-500/40 bg-orange-500/5' :
+                        item.status === 'READY'      ? 'border-emerald-500/30 bg-emerald-500/5' :
+                        item.status === 'LISTED'     ? 'border-fuchsia-500/30 bg-fuchsia-500/5' :
+                        item.status === 'FAILED'     ? 'border-red-500/30 bg-red-500/5' :
+                        item.status === 'BLOCKED'    ? 'border-orange-500/30 bg-orange-500/5' :
+                        item.status === 'PROCESSING' ? 'border-cyan-500/30 bg-cyan-500/5' :
+                        'border-slate-800/60 bg-slate-900/50'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          {/* Thumbnail */}
+                          <div className="h-14 w-14 rounded-lg border border-slate-700/60 bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center">
+                            {imgUrl ? (
+                              <img src={imgUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <ImageIcon className="h-5 w-5 text-slate-600" />
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                              <span className="text-[9px] font-mono text-slate-500">{asin}</span>
+                              <span className={`rounded-full border px-1.5 py-0.5 text-[8px] font-semibold tracking-widest ${
+                                item.status === 'READY'      ? 'border-emerald-500/40 text-emerald-400' :
+                                item.status === 'LISTED'     ? 'border-fuchsia-500/40 text-fuchsia-400' :
+                                item.status === 'FAILED'     ? 'border-red-500/40 text-red-400' :
+                                item.status === 'BLOCKED'    ? 'border-orange-500/40 text-orange-400' :
+                                item.status === 'PROCESSING' ? 'border-cyan-500/40 text-cyan-400' :
+                                'border-slate-600/40 text-slate-400'
+                              }`}>
+                                {item.status}
+                              </span>
+                              {/* VERO badge */}
+                              {isVero && (
+                                <span className="rounded-full border border-orange-500/60 bg-orange-500/20 px-1.5 py-0.5 text-[8px] font-bold text-orange-300 tracking-widest">
+                                  ⚠️ VERO
+                                </span>
+                              )}
+                              {/* FAILED reason */}
+                              {item.status === 'FAILED' && item.error && (
+                                <span className="text-[8px] text-red-400/70 truncate max-w-[120px]" title={item.error.message}>
+                                  {item.error.code}
+                                </span>
+                              )}
+                              {item.images.length > 0 && (
+                                <span className="flex items-center gap-0.5 text-[8px] text-slate-500">
+                                  <ImageIcon className="h-2.5 w-2.5" />{item.images.length}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Title */}
+                            <p className="text-xs text-slate-200 font-medium truncate leading-tight">
+                              {item.ebay.title || item.amazon.title || asin}
+                            </p>
+
+                            {/* Pricing row */}
+                            {item.amazon.price > 0 && (
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className="text-[10px] text-slate-500">Amazon: <span className="text-slate-300">${item.amazon.price.toFixed(2)}</span></span>
+                                <span className="text-[10px] text-emerald-400 font-semibold">eBay: ${item.pricing.ebayPrice.toFixed(2)}</span>
+                                <div className="flex items-center gap-1">
+                                  <DollarSign className="h-2.5 w-2.5 text-slate-500" />
+                                  <input
+                                    type="number"
+                                    min={10} max={500} step={5}
+                                    value={editingMarkup[asin] ?? item.pricing.markupPct}
+                                    onChange={e => setEditingMarkup(m => ({ ...m, [asin]: Number(e.target.value) }))}
+                                    onBlur={() => {
+                                      const v = editingMarkup[asin] ?? item.pricing.markupPct;
+                                      handleOptiMarkupChange(asin, v);
+                                    }}
+                                    className="w-14 rounded border border-slate-700 bg-slate-800 px-1 py-0.5 text-[10px] text-slate-200 text-center focus:outline-none focus:border-emerald-500/50"
+                                  />
+                                  <span className="text-[10px] text-slate-500">% markup</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Keywords */}
+                            {item.ebay.keywords.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {item.ebay.keywords.slice(0, 4).map((kw, ki) => (
+                                  <span key={ki} className="rounded-full bg-slate-800 border border-slate-700/60 px-1.5 py-0.5 text-[8px] text-slate-400">{kw}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-1 shrink-0">
+                            {item.status === 'DRAFT' || item.status === 'FAILED' ? (
+                              <button
+                                onClick={() => handleOptiFetch(asin)}
+                                disabled={isFetching}
+                                className="flex items-center gap-1 rounded-lg bg-fuchsia-600/80 hover:bg-fuchsia-600 disabled:opacity-50 px-2 py-1 text-[10px] font-semibold text-white transition-colors"
+                              >
+                                {isFetching
+                                  ? <Loader className="h-3 w-3 animate-spin" />
+                                  : <Sparkles className="h-3 w-3" />
+                                }
+                                {isFetching ? 'Fetching…' : 'Fetch & Enrich'}
+                              </button>
+                            ) : item.status === 'LISTED' ? (
+                              <a
+                                href={item.ebayListingUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 rounded-lg bg-fuchsia-600/20 border border-fuchsia-500/30 px-2 py-1 text-[10px] text-fuchsia-300 hover:bg-fuchsia-600/30 transition-colors"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View
+                              </a>
+                            ) : null}
+
+                            {/* Reorder */}
+                            <div className="flex gap-0.5">
+                              <button
+                                onClick={() => handleOptiMoveUp(asin)}
+                                disabled={idx === 0}
+                                className="rounded p-1 text-slate-500 hover:text-slate-200 disabled:opacity-20 transition-colors"
+                                title="Move up"
+                              >
+                                <ArrowUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => handleOptiMoveDown(asin)}
+                                disabled={idx === optiStorage.order.length - 1}
+                                className="rounded p-1 text-slate-500 hover:text-slate-200 disabled:opacity-20 transition-colors"
+                                title="Move down"
+                              >
+                                <ArrowDown className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => handleOptiRemove(asin)}
+                                className="rounded p-1 text-slate-500 hover:text-red-400 transition-colors"
+                                title="Remove"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Error details */}
+                        {item.error && (
+                          <div className="mt-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-1.5 text-[10px] text-red-400">
+                            {item.error.message}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-700/50 p-8 text-center">
+                  <Sparkles className="h-8 w-8 text-slate-600 mx-auto mb-3" />
+                  <p className="text-sm text-slate-400 font-medium">No items yet</p>
+                  <p className="text-xs text-slate-600 mt-1">Paste Amazon URLs or ASINs above to get started</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Input card (Queue tab only) */}
+          {activeTab === 'queue' && (
           <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-5">
             <div className="flex items-center gap-2 mb-3">
               <UploadCloud className="h-4 w-4 text-cyan-400" />
@@ -431,6 +880,7 @@ export default function BulkLister() {
               )}
             </div>
           </div>
+          )}
 
           {/* Progress bar (visible when running) */}
           {isActive && totalJobs > 0 && (
@@ -537,6 +987,7 @@ export default function BulkLister() {
               </div>
             </div>
           )}
+
         </div>
 
         {/* ── RIGHT COLUMN ── */}
@@ -603,11 +1054,17 @@ export default function BulkLister() {
                     disabled={isActive}
                     className={`rounded-lg border px-2 py-2 text-left transition-colors disabled:opacity-40 ${
                       listingType === lt.id
-                        ? 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300'
+                        ? lt.id === 'rival'
+                          ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
+                          : 'border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300'
                         : 'border-slate-700/50 bg-slate-800/40 text-slate-400 hover:border-slate-600'
                     }`}
                   >
-                    <div className="text-xs font-semibold">{lt.label}</div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-semibold">{lt.label}</span>
+                      {lt.recommended && <span className="rounded-full bg-emerald-500/20 px-1 py-0.5 text-[7px] text-emerald-400 font-semibold">REC</span>}
+                      {lt.id === 'rival' && <span className="text-[8px]">⚔️</span>}
+                    </div>
                     <div className="text-[9px] text-slate-500 mt-0.5">{lt.desc}</div>
                   </button>
                 ))}
@@ -731,6 +1188,38 @@ export default function BulkLister() {
                   />
                   <span className="text-xs text-slate-400">Auto-close error tabs</span>
                 </label>
+
+                {/* Debug mode */}
+                <div className="border-t border-slate-700/40 pt-3 mt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox" checked={debugMode}
+                      onChange={e => {
+                        setDebugMode(e.target.checked);
+                        chrome.storage.local.set({ syndrax_debug_mode: e.target.checked });
+                        console.log(`[Debug] Debug mode ${e.target.checked ? 'ON' : 'OFF'}`);
+                      }}
+                      className="accent-amber-500"
+                    />
+                    <span className="text-xs text-amber-400 font-semibold">🧪 Debug Mode</span>
+                  </label>
+                  {debugMode && (
+                    <div className="mt-2 p-2 rounded bg-amber-500/5 border border-amber-500/20">
+                      <p className="text-[9px] text-amber-400/70 mb-2">
+                        Test ASIN: <span className="font-mono text-amber-300">{DEBUG_ASIN}</span><br/>
+                        Opens eBay tab with uploader event tracing active.<br/>
+                        Check service worker console for full event log.
+                      </p>
+                      <button
+                        onClick={handleDebugTest}
+                        disabled={isActive}
+                        className="w-full rounded-lg bg-amber-500/20 border border-amber-500/40 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/30 disabled:opacity-40 transition-colors"
+                      >
+                        🧪 Run Debug Test ({DEBUG_ASIN})
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

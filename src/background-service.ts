@@ -3,6 +3,8 @@ import type { Message } from './services/messaging';
 import { discord, sendDailySummaryWebhook } from './services/discord-logger';
 import { claimTrackingNumber, type ClaimParams } from './services/trackcaptain';
 import { handleCheckVero, handleCreateEbayListing, resolveListingCompletion } from './background/listing-handler';
+import { optiList } from './services/opti-list';
+import { generateEbayListing } from './services/ai';
 
 // Helper to get next midnight timestamp
 function getNextMidnight(): number {
@@ -469,16 +471,34 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           // Retry executeScript every 1500ms up to 10 times until #productTitle is present
           const scrapeFunc = () => {
             const title = document.querySelector('#productTitle')?.textContent?.trim() || '';
-            const priceEl = document.querySelector('.a-price .a-offscreen, #priceblock_ourprice, #priceblock_dealprice, .a-price-whole');
-            const price = parseFloat((priceEl?.textContent || '0').replace(/[^0-9.]/g, '')) || 0;
+            // Price: try offscreen (full price), then legacy blocks, then whole+fraction
+            const offscreen = document.querySelector<HTMLElement>('.a-price .a-offscreen');
+            const ourPrice  = document.querySelector<HTMLElement>('#priceblock_ourprice, #priceblock_dealprice');
+            const wholeEl   = document.querySelector<HTMLElement>('.a-price-whole');
+            const fracEl    = document.querySelector<HTMLElement>('.a-price-fraction');
+            let price = 0;
+            if (offscreen?.textContent) {
+              price = parseFloat(offscreen.textContent.replace(/[^0-9.]/g, '')) || 0;
+            } else if (ourPrice?.textContent) {
+              price = parseFloat(ourPrice.textContent.replace(/[^0-9.]/g, '')) || 0;
+            } else if (wholeEl?.textContent) {
+              const whole = wholeEl.textContent.replace(/[^0-9]/g, '');
+              const frac  = fracEl?.textContent?.replace(/[^0-9]/g, '') || '00';
+              price = parseFloat(`${whole}.${frac}`) || 0;
+            }
             const asinMatch = window.location.href.match(/\/dp\/([A-Z0-9]{10})/);
             const asin = asinMatch?.[1] || '';
             const mainImage = (document.querySelector('#landingImage, #imgBlkFront') as HTMLImageElement)?.src || '';
+            // Description: bullet points preferred, fall back to prose description
+            const bulletsEl = document.querySelector<HTMLElement>('#feature-bullets');
+            const descEl    = document.querySelector<HTMLElement>('#productDescription');
+            const description = (bulletsEl?.textContent || descEl?.textContent || '')
+              .trim().replace(/\s+/g, ' ').slice(0, 2000);
             if (!title) return null;
-            return { title, price, asin, mainImage };
+            return { title, price, asin, mainImage, description };
           };
 
-          let scraped: { title: string; price: number; asin: string; mainImage: string } | null = null;
+          let scraped: { title: string; price: number; asin: string; mainImage: string; description: string } | null = null;
           for (let attempt = 0; attempt < 10; attempt++) {
             await new Promise(r => setTimeout(r, 1500));
             try {
@@ -503,6 +523,7 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
               brand: '',
               image: scraped.mainImage || '',
               asin: scraped.asin || asin,
+              description: scraped.description || '',
             };
           }
           return { error: 'Could not scrape product data — try again' };
@@ -558,14 +579,194 @@ async function handleMessage(message: Message<unknown> & { type: string }, sende
           ebayPrice: number;
           title: string;
           description?: string;
+          image?: string;
           condition?: string;
           quantity?: number;
         });
       }
 
+      // ===== OPTI-LIST: CRUD OPERATIONS =====
+      if (msgType === 'OPTI_GET_ALL') {
+        return optiList.getAll();
+      }
+
+      if (msgType === 'OPTI_ADD_ITEMS') {
+        const { asins } = message.payload as { asins: string[] };
+        return optiList.addItems(asins);
+      }
+
+      if (msgType === 'OPTI_REMOVE_ITEM') {
+        const { asin } = message.payload as { asin: string };
+        await optiList.removeItem(asin);
+        return { success: true };
+      }
+
+      if (msgType === 'OPTI_UPDATE_PRICING') {
+        const { asin, cost, markupPct, quantity } = message.payload as {
+          asin: string; cost: number; markupPct: number; quantity: number;
+        };
+        return optiList.updatePricing(asin, cost, markupPct, quantity);
+      }
+
+      if (msgType === 'OPTI_UPDATE_ITEM') {
+        const { asin, patch } = message.payload as { asin: string; patch: Record<string, unknown> };
+        return optiList.updateItem(asin, patch);
+      }
+
+      if (msgType === 'OPTI_REORDER') {
+        const { order } = message.payload as { order: string[] };
+        await optiList.reorder(order);
+        return { success: true };
+      }
+
+      if (msgType === 'OPTI_CLEAR') {
+        await optiList.clear();
+        return { success: true };
+      }
+
+      // ===== OPTI-LIST: FETCH + ENRICH PIPELINE =====
+      // Fetch Amazon data + generate Opti content for one ASIN
+      if (msgType === 'OPTI_FETCH_ASIN') {
+        const { asin } = message.payload as { asin: string };
+
+        // Ensure item exists
+        await optiList.addItem(asin);
+        await optiList.setStatus(asin, 'PROCESSING');
+
+        // Fetch Amazon product data (reuse existing FETCH_AMAZON_PRODUCT logic)
+        let newTab: chrome.tabs.Tab | null = null;
+        try {
+          newTab = await chrome.tabs.create({
+            url: `https://www.amazon.com/dp/${asin}`,
+            active: false
+          });
+
+          const scrapeFunc = () => {
+            const title = document.querySelector('#productTitle')?.textContent?.trim() || '';
+            const offscreen = document.querySelector<HTMLElement>('.a-price .a-offscreen');
+            const ourPrice  = document.querySelector<HTMLElement>('#priceblock_ourprice, #priceblock_dealprice');
+            const wholeEl   = document.querySelector<HTMLElement>('.a-price-whole');
+            const fracEl    = document.querySelector<HTMLElement>('.a-price-fraction');
+            let price = 0;
+            if (offscreen?.textContent) {
+              price = parseFloat(offscreen.textContent.replace(/[^0-9.]/g, '')) || 0;
+            } else if (ourPrice?.textContent) {
+              price = parseFloat(ourPrice.textContent.replace(/[^0-9.]/g, '')) || 0;
+            } else if (wholeEl?.textContent) {
+              const whole = wholeEl.textContent.replace(/[^0-9]/g, '');
+              const frac  = fracEl?.textContent?.replace(/[^0-9]/g, '') || '00';
+              price = parseFloat(`${whole}.${frac}`) || 0;
+            }
+            const asinMatch = window.location.href.match(/\/dp\/([A-Z0-9]{10})/);
+            const mainImage = (document.querySelector('#landingImage, #imgBlkFront') as HTMLImageElement)?.src || '';
+            // All thumbnail images for this product
+            const thumbImgs = Array.from(document.querySelectorAll<HTMLImageElement>('#altImages img, .imageThumbnail img'))
+              .map(img => img.src.replace(/\._[^.]+_\./, '.'))
+              .filter(s => !s.includes('transparent-pixel') && s.startsWith('http'))
+              .slice(0, 10);
+            const brand = (document.querySelector('#bylineInfo, #brand')?.textContent || '').replace(/^by\s+/i, '').trim();
+            const bulletsEl = document.querySelector<HTMLElement>('#feature-bullets');
+            const descEl    = document.querySelector<HTMLElement>('#productDescription');
+            const description = (bulletsEl?.textContent || descEl?.textContent || '')
+              .trim().replace(/\s+/g, ' ').slice(0, 2000);
+            if (!title) return null;
+            return { title, price, asin: asinMatch?.[1] || '', mainImage, thumbImgs, brand, description };
+          };
+
+          let scraped: { title: string; price: number; asin: string; mainImage: string; thumbImgs: string[]; brand: string; description: string } | null = null;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            await new Promise(r => setTimeout(r, 1500));
+            try {
+              const res = await chrome.scripting.executeScript({ target: { tabId: newTab.id! }, func: scrapeFunc });
+              if (res?.[0]?.result?.title) { scraped = res[0].result; break; }
+            } catch { /* page not ready yet */ }
+          }
+
+          if (!scraped) {
+            await optiList.setStatus(asin, 'FAILED', { code: 'SCRAPE_FAILED', message: 'Could not scrape Amazon page', timestamp: Date.now() });
+            return { success: false, error: 'Could not scrape Amazon page' };
+          }
+
+          // Save Amazon data to OptiListItem
+          const imageUrls = [scraped.mainImage, ...scraped.thumbImgs].filter(Boolean);
+          await optiList.setAmazonData(asin, {
+            title: scraped.title,
+            description: scraped.description,
+            brand: scraped.brand,
+            price: scraped.price,
+            mainImageUrl: scraped.mainImage,
+            imageUrls,
+            fetchedAt: Date.now(),
+          });
+
+          // Seed images[] with Amazon images
+          for (let i = 0; i < Math.min(imageUrls.length, 5); i++) {
+            await optiList.addImage(asin, {
+              source: 'amazon',
+              url: imageUrls[i],
+              quality: 'good',
+              isApproved: false,
+            });
+          }
+
+          // Generate Opti-List SEO content via Claude (only if API key is set)
+          const storedKey = await storage.getApiKey().catch(() => null);
+          if (storedKey) {
+            try {
+              const seo = await generateEbayListing({
+                title: scraped.title,
+                description: scraped.description,
+                price: scraped.price,
+                images: imageUrls.slice(0, 3),
+              });
+              await optiList.setEbayContent(asin, {
+                title: seo.ebayTitle,
+                description: seo.ebayDescription,
+                keywords: seo.keywords,
+                generatedAt: Date.now(),
+              });
+              console.log(`[OptiList] AI title generated for ${asin}`);
+            } catch (e) {
+              console.warn(`[OptiList] AI generation failed for ${asin}, using Amazon title`);
+              await optiList.setEbayContent(asin, {
+                title: scraped.title.slice(0, 80),
+                description: scraped.description,
+                keywords: [],
+                generatedAt: Date.now(),
+              });
+            }
+          } else {
+            // No API key — use Amazon title directly, no error spam
+            console.log(`[OptiList] No API key — using Amazon title for ${asin}`);
+            await optiList.setEbayContent(asin, {
+              title: scraped.title.slice(0, 80),
+              description: scraped.description,
+              keywords: [],
+              generatedAt: Date.now(),
+            });
+          }
+
+          const item = await optiList.getItem(asin);
+          return { success: true, item };
+        } catch (e) {
+          await optiList.setStatus(asin, 'FAILED', { code: 'FETCH_ERROR', message: String(e), timestamp: Date.now() });
+          return { success: false, error: String(e) };
+        } finally {
+          if (newTab?.id) chrome.tabs.remove(newTab.id).catch(() => {});
+        }
+      }
+
       // ===== BULK LISTER: LISTING COMPLETE SIGNAL =====
       // Sent by ebay-prelist.ts content script when eBay navigates away from prelist page.
       // Routes the completion signal to the waiting promise in handleCreateEbayListing().
+      // ===== DEBUG: Uploader event tracer =====
+      if (msgType === 'DEBUG_UPLOADER_EVENT') {
+        const { source, evt, detail } = message.payload as { source: string; evt: string; detail?: string };
+        console.log(`%c[🧪 DebugUploader] ${source} → ${evt}${detail ? ` | ${detail}` : ''}`,
+          'color: #FFD700; font-weight: bold; font-size: 11px');
+        return { success: true };
+      }
+
       if (msgType === 'LISTING_COMPLETE') {
         const tabId = sender.tab?.id;
         if (tabId !== undefined) {
@@ -1390,5 +1591,5 @@ function startResearchScheduler(): void {
   setInterval(runNextQuery, 4 * 60 * 60 * 1000);
 }
 
-// Start research scheduler on extension load
-startResearchScheduler();
+// Research scheduler disabled — runs only when explicitly triggered from UI
+// startResearchScheduler();

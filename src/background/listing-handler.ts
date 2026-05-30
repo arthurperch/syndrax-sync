@@ -1,4 +1,5 @@
 import { VERO_BRANDS } from '../services/compliance';
+import { processProductImages, getEbayImageUrls } from '../services/image-pipeline';
 
 const HIGH_RISK_BRANDS = ['Apple', 'Samsung', 'Nike', 'Louis Vuitton', 'Disney'];
 
@@ -32,13 +33,70 @@ export async function handleCreateEbayListing(payload: {
   ebayPrice: number;
   title: string;
   description?: string;
+  image?: string;
+  images?: string[];
+  listingType?: string;
   condition?: string;
   quantity?: number;
 }): Promise<{ success: boolean; error?: string }> {
-  const { asin, ebayPrice, title, description, condition, quantity } = payload;
+  const { asin, ebayPrice, title, description, image, images, listingType, condition, quantity } = payload;
+
+  let finalTitle = title;
+  let finalDescription = description;
+
+  // For opti/seo listing types, generate an AI-optimised SEO title + description
+  // Only attempt if API key is configured — skip silently if not
+  if ((listingType === 'opti' || listingType === 'seo') && title) {
+    try {
+      const { storage } = await import('../services/storage');
+      const apiKey = await storage.getApiKey().catch(() => null);
+      if (apiKey) {
+        const { generateEbayListing } = await import('../services/ai');
+        const seoResult = await generateEbayListing({
+          title,
+          description: description || title,
+          price: ebayPrice,
+          images: image ? [image] : [],
+        });
+        if (seoResult?.ebayTitle)       finalTitle       = seoResult.ebayTitle;
+        if (seoResult?.ebayDescription) finalDescription = seoResult.ebayDescription;
+        console.log('[Syndrax] AI SEO title generated for', asin);
+      } else {
+        console.log('[Syndrax] No API key — using Amazon title for', asin);
+      }
+    } catch (e) {
+      console.warn('[Syndrax] SEO generation error for', asin, '— using Amazon title');
+    }
+  }
+
+  // Collect all image URLs (from payload.image or payload.images)
+  const imageUrls = [];
+  if (payload.image) imageUrls.push(payload.image);
+  if (payload.images && Array.isArray(payload.images)) imageUrls.push(...payload.images);
+
+  // Convert to base64 dataUrls via image pipeline
+  let ebayImageUrls: string[] = [];
+  if (imageUrls.length > 0) {
+    try {
+      const pipelineResult = await processProductImages(asin, imageUrls);
+      ebayImageUrls = getEbayImageUrls(pipelineResult);
+      console.log(`[Syndrax] Converted ${imageUrls.length} images to base64 for ${asin}`);
+    } catch (err) {
+      console.warn(`[Syndrax] Image processing failed for ${asin}:`, err);
+      // Continue without images rather than failing the listing
+    }
+  }
 
   await chrome.storage.local.set({
-    pendingListing: { title, description, price: ebayPrice, condition, quantity, images: [], asin }
+    pendingListing: {
+      title: finalTitle,
+      description: finalDescription,
+      price: ebayPrice,
+      condition,
+      quantity,
+      images: ebayImageUrls,
+      asin
+    }
   });
 
   // Pass title via URL param — eBay pre-fills the keyword search box.
